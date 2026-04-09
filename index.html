@@ -37,12 +37,8 @@ select {width:95%; padding:3px; font-size:14px;}
 <table>
 
 <tr height="5%">
-<td>
-<select id="districtSelect"></select>
-</td>
-<td>
-<select id="upazilaSelect"></select>
-</td>
+<td><select id="districtSelect"></select></td>
+<td><select id="upazilaSelect"></select></td>
 </tr>
 
 <tr height="90%">
@@ -84,6 +80,8 @@ select {width:95%; padding:3px; font-size:14px;}
 </div>
 
 <script>
+
+// ---------- MAP INIT ----------
 let map = L.map('map').setView([23.5, 90.3], 7);
 L.tileLayer('https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
   subdomains:['mt0','mt1','mt2','mt3']
@@ -91,7 +89,12 @@ L.tileLayer('https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
 
 let geoLayer, dataJSON={}, termJSON={}, chart;
 
-// Load all
+// ---------- CLEAN FUNCTION ----------
+function clean(str){
+  return str ? str.toString().trim().toLowerCase() : '';
+}
+
+// ---------- LOAD DATA ----------
 Promise.all([
  fetch('upazilas.geojson').then(r=>r.json()),
  fetch('Data.json').then(r=>r.json()),
@@ -106,7 +109,7 @@ Promise.all([
  updateChart();
 });
 
-// Dropdown init
+// ---------- DROPDOWNS ----------
 function initDropdowns(){
  let districts = Object.keys(dataJSON);
  districtSelect.innerHTML = districts.map(d=>`<option>${d}</option>`).join('');
@@ -114,12 +117,15 @@ function initDropdowns(){
 
  districtSelect.onchange = ()=>{
    updateUpazila();
+   refreshMap();
    updateStats();
    updateChart();
-   geoLayer.eachLayer(l=>l.setStyle(styleFeature(l.feature)));
  };
 
  upazilaSelect.onchange = ()=>{
+   let d = districtSelect.value;
+   let u = upazilaSelect.value;
+   zoomToUpazila(d,u);
    updateStats();
    updateChart();
  };
@@ -127,39 +133,57 @@ function initDropdowns(){
 
 function updateUpazila(){
  let d = districtSelect.value;
- let ups = Object.keys(dataJSON[d]);
+ let ups = Object.keys(dataJSON[d] || {});
  upazilaSelect.innerHTML = ups.map(u=>`<option>${u}</option>`).join('');
 }
 
-// Map
+// ---------- MAP ----------
 function loadMap(geo){
  geoLayer = L.geoJSON(geo,{
    style: styleFeature,
-   onEachFeature: (f,l)=>{
-     l.on('click', ()=>{
-       districtSelect.value = f.properties.adm2_name;
+   onEachFeature: (feature, layer)=>{
+
+     layer.on('click', ()=>{
+       let d = feature.properties.adm2_name;
+       let u = feature.properties.adm3_name;
+
+       districtSelect.value = d;
        updateUpazila();
-       upazilaSelect.value = f.properties.adm3_name;
+       upazilaSelect.value = u;
+
+       zoomToUpazila(d,u);
        updateStats();
        updateChart();
      });
+
    }
  }).addTo(map);
 
  map.fitBounds(geoLayer.getBounds());
+ refreshMap();
 }
 
-// Style logic
+// ---------- STYLE ----------
 function styleFeature(feature){
- let d = feature.properties.adm2_name;
- let u = feature.properties.adm3_name;
 
- let status = termJSON[d]?.[u]?.["Claim Status"];
+ let d = clean(feature.properties.adm2_name);
+ let u = clean(feature.properties.adm3_name);
 
  let fill = 'transparent';
 
- if(status === "Claimed") fill = 'red';
- else if(status === "Non Claimed") fill = 'green';
+ for(let dist in termJSON){
+   if(clean(dist) === d){
+     for(let up in termJSON[dist]){
+       if(clean(up) === u){
+
+         let status = termJSON[dist][up]["Claim Status"];
+
+         if(status === "Claimed") fill = 'red';
+         else if(status === "Non-Claimed" || status === "Non Claimed") fill = 'green';
+       }
+     }
+   }
+ }
 
  return {
    color:'blue',
@@ -169,29 +193,49 @@ function styleFeature(feature){
  };
 }
 
-// Stats
+// ---------- REFRESH MAP ----------
+function refreshMap(){
+ geoLayer.eachLayer(l=>{
+   l.setStyle(styleFeature(l.feature));
+ });
+}
+
+// ---------- ZOOM ----------
+function zoomToUpazila(d,u){
+ geoLayer.eachLayer(layer=>{
+   let ld = layer.feature.properties.adm2_name;
+   let lu = layer.feature.properties.adm3_name;
+
+   if(clean(ld) === clean(d) && clean(lu) === clean(u)){
+     map.fitBounds(layer.getBounds());
+   }
+ });
+}
+
+// ---------- STATS ----------
 function updateStats(){
  let d = districtSelect.value;
  let u = upazilaSelect.value;
 
  let claimed=0, non=0;
 
- Object.keys(termJSON[d]||{}).forEach(x=>{
-   if(termJSON[d][x]["Claim Status"]==="Claimed") claimed++;
-   else non++;
+ Object.values(termJSON[d] || {}).forEach(obj=>{
+   let status = obj["Claim Status"];
+   if(status === "Claimed") claimed++;
+   else if(status === "Non-Claimed" || status === "Non Claimed") non++;
  });
 
- claimedBox.innerText = "Claimed: "+claimed;
- nonClaimedBox.innerText = "Non-Claimed: "+non;
+ claimedBox.innerText = "Claimed: " + claimed;
+ nonClaimedBox.innerText = "Non-Claimed: " + non;
 
  let ref = termJSON[d]?.[u]?.["Ref Min Temp"];
  let obs = termJSON[d]?.[u]?.["Obsrved Min Temp"];
 
- refTemp.innerText = "Triggered Temp: "+(ref?ref.toFixed(2):'-');
- obsTemp.innerText = "Observed Temp: "+(obs?obs.toFixed(2):'-');
+ refTemp.innerText = "Triggered Temp: " + (ref ? ref.toFixed(2) : '-');
+ obsTemp.innerText = "Observed Temp: " + (obs ? obs.toFixed(2) : '-');
 }
 
-// Chart
+// ---------- CHART ----------
 function updateChart(){
  let d = districtSelect.value;
  let u = upazilaSelect.value;
@@ -203,7 +247,7 @@ function updateChart(){
  let values = labels.map(k=>parseFloat(series[k].toFixed(2)));
  let ref = termJSON[d]?.[u]?.["Ref Min Temp"] || 0;
 
- let colors = values.map(v=> v<=ref ? 'red':'blue');
+ let colors = values.map(v => v <= ref ? 'red' : 'blue');
 
  if(chart) chart.destroy();
 
@@ -226,6 +270,7 @@ function updateChart(){
    }
  });
 }
+
 </script>
 
 </body>
