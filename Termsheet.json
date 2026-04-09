@@ -1,0 +1,557 @@
+{
+  "Jashore": {
+    "Abhaynagar": {
+      "Ref Min Temp": 8.0,
+      "Obsrved Min Temp": 9.556502983236404,
+      "Claim Status": "Non Claimed"
+    },
+    "Bagharpara": {
+      "Ref Min Temp": 8.0,
+      "Obsrved Min Temp": 9.472910112537845,
+      "Claim Status": "Non Claimed"
+    },
+    "Chaugachha": {
+      "Ref Min Temp": 8.0,
+      "Obsrved Min Temp": 9.97209565458244,
+      "Claim Status": "Non Claimed"
+    },
+    "Jashore Sadar": {
+      "Ref Min Temp": 8.0,
+      "Obsrved Min Temp": 9.604844114710865,
+      "Claim Status": "Non Claimed"
+    },
+    "Jhikargachha": {
+      "Ref Min Temp": 8.0,
+      "Obsrved Min Temp": 9.51563401730973,
+      "Claim Status": "Non Claimed"
+    },
+    "Keshabpur": {
+      "Ref Min Temp": 8.0,
+      "Obsrved Min Temp": 9.859851650928912,
+      "Claim Status": "Non Claimed"
+    },
+    "Manirampur": {
+      "Ref Min Temp": 8.0,
+      "Obsrved Min Temp": 9.47853862544174,
+      "Claim Status": "Non Claimed"
+    },
+    "Sharsha": {
+      "Ref Min Temp": 8.0,
+      "Obsrved Min Temp": 9.20384342422247,
+      "Claim Status": "Non Claimed"
+    }
+  },
+  "Chuadanga": {
+    "Alamdanga": {
+      "Ref Min Temp": 8.0,
+      "Obsrved Min Temp": 9.905988417312583,
+      "Claim Status": "Non Claimed"
+    },
+    "Chuadanga Sadar": {
+      "Ref Min Temp": 8.0,
+      "Obsrved Min Temp": 9.438968468387992,
+      "Claim Status": "Non Claimed"
+    },
+    "Damurhuda": {
+      "Ref Min Temp": 7.5,
+      "Obsrved Min Temp": 10.00109508175758,
+      "Claim Status": "Non Claimed"
+    },
+    "Jibannagar": {
+      "Ref Min Temp": 7.5,
+      "Obsrved Min Temp": 9.629255663227854,
+      "Claim Status": "Non Claimed"
+    }
+  },
+  "Pabna": {
+    "Atgharia": {
+      "Ref Min Temp": 8.0,
+      "Obsrved Min Temp": 10.03229389190676,
+      "Claim Status": "Non Claimed"
+    },
+    "Bera": {
+      "Ref Min Temp": 8.0,
+      "Obsrved Min Temp": 10.34339878812752,
+      "Claim Status": "Non Claimed"
+    },
+    "Bhangura": {
+      "Ref Min Temp": 8.0,
+      "Obsrved Min Temp": 10.08672323882897,
+      "Claim Status": "Non Claimed"
+    },
+    "Chatmohar": {
+      "Ref Min Temp": 7.5,
+      "Obsrved Min Temp": 9.44154272658624,
+      "Claim Status": "Non Claimed"
+    },
+    "Faridpur": {
+      "Ref Min Temp": 8.0,
+      "Obsrved Min Temp": 9.895239202990526,
+      "Claim Status": "Non Claimed"
+    },
+    "Ishwardi": {
+      "Ref Min Temp": 8.0,
+      "Obsrved Min Temp": 9.367024215298091,
+      "Claim Status": "Non Claimed"
+    },
+    "Pabna Sadar": {
+      "Ref Min Temp": 8.0,
+      "Obsrved Min Temp": 9.933602905273462,
+      "Claim Status": "Non Claimed"
+    },
+    "Santhia": {
+      "Ref Min Temp": 8.0,
+      "Obsrved Min Temp": 10.07424316406252,
+      "Claim Status": "Non Claimed"
+    },
+    "Sujanagar": {
+      "Ref Min Temp": 8.0,
+      "Obsrved Min Temp": 10.1384536759768,
+      "Claim Status": "Non Claimed"
+    }
+  },
+  "Panchagarh": {
+    "Atowari": {
+      "Ref Min Temp": 7.0,
+      "Obsrved Min Temp": 9.335009018255764,
+      "Claim Status": "Non Claimed"
+    },
+    "Boda": {
+      "Ref Min Temp": 7.0,
+      "Obsrved Min Temp": 9.370958262041604,
+      "Claim Status": "Non Claimed"
+    },
+    "Debiganj": {
+      "Ref Min Temp": 7.0,
+      "Obsrved Min Temp": 9.488473268539208,
+      "Claim Status": "Non Claimed"
+    },
+    "Panchagarh Sadar": {
+      "Ref Min Temp": 7.0,
+      "Obsrved Min Temp": 9.801421343223714,
+      "Claim Status": "Non Claimed"
+    },
+    "Tentulia": {
+      "Ref Min Temp": 7.0,
+      "Obsrved Min Temp": 8.400607203552607,
+      "Claim Status": "Non Claimed"
+    }
+  },
+  "Rangpur": {
+    "Badarganj": {
+      "Ref Min Temp": 7.0,
+      "Obsrved Min Temp": 9.64674051515105,
+      "Claim Status": "Non Claimed"
+    },
+    "Gangachara": {
+      "Ref Min Temp": 7.5,
+      "Obsrved Min Temp": 9.75421060046312,
+      "Claim Status": "Non Claimed"
+    },
+    "Kaunia": {
+      "Ref Min Temp": 7.5,
+      "Obsrved Min Temp": 9.989742583796277,
+      "Claim Status": "Non Claimed"
+    },
+    "Mithapukur": {
+      "Ref Min Temp": 7.0,
+      "Obsrved Min Temp": 10.23479990686091,
+      "Claim Status": "Non Claimed"
+    },
+    "Pirgachha": {
+      "Ref Min Temp": 8.0,
+      "Obsrved Min Temp": 9.694471868095876,
+      "Claim Status": "Non Claimed"
+    },
+    "Pirganj": {
+      "Ref Min Temp": 7.0,
+      "Obsrved Min Temp": 10.00462528194464,
+      "Claim Status": "Non Claimed"
+    },
+    "Rangpur Sadar": {
+      "Ref Min Temp": 7.5,
+      "Obsrved Min Temp": 9.49988199869794,
+      "Claim Status": "Non Claimed"
+    },
+    "Taraganj": {
+      "Ref Min Temp": 7.0,
+      "Obsrved Min Temp": 9.645715332031273,
+      "Claim Status": "Non Claimed"
+    }
+  },
+  "Natore": {
+    "Bagatipara": {
+      "Ref Min Temp": 7.5,
+      "Obsrved Min Temp": 10.27800826449841,
+      "Claim Status": "Non Claimed"
+    },
+    "Baraigram": {
+      "Ref Min Temp": 7.0,
+      "Obsrved Min Temp": 10.13387916873647,
+      "Claim Status": "Non Claimed"
+    },
+    "Gurudaspur": {
+      "Ref Min Temp": 7.0,
+      "Obsrved Min Temp": 9.95225759898331,
+      "Claim Status": "Non Claimed"
+    },
+    "Lalpur": {
+      "Ref Min Temp": 7.5,
+      "Obsrved Min Temp": 9.321795788667266,
+      "Claim Status": "Non Claimed"
+    },
+    "Naldanga": {
+      "Ref Min Temp": 7.0,
+      "Obsrved Min Temp": 10.2725769042969,
+      "Claim Status": "Non Claimed"
+    },
+    "Natore Sadar": {
+      "Ref Min Temp": 7.0,
+      "Obsrved Min Temp": 10.27273817149873,
+      "Claim Status": "Non Claimed"
+    },
+    "Singra": {
+      "Ref Min Temp": 7.0,
+      "Obsrved Min Temp": 10.15386528444676,
+      "Claim Status": "Non Claimed"
+    }
+  },
+  "Rajshahi": {
+    "Bagha": {
+      "Ref Min Temp": 7.5,
+      "Obsrved Min Temp": 10.22988560301787,
+      "Claim Status": "Non Claimed"
+    },
+    "Bagmara": {
+      "Ref Min Temp": 7.5,
+      "Obsrved Min Temp": 10.36691749181316,
+      "Claim Status": "Non Claimed"
+    },
+    "Charghat": {
+      "Ref Min Temp": 7.5,
+      "Obsrved Min Temp": 10.06796181321564,
+      "Claim Status": "Non Claimed"
+    },
+    "Durgapur": {
+      "Ref Min Temp": 7.5,
+      "Obsrved Min Temp": 10.0778920049253,
+      "Claim Status": "Non Claimed"
+    },
+    "Godagari": {
+      "Ref Min Temp": 7.5,
+      "Obsrved Min Temp": 10.12711128758181,
+      "Claim Status": "Non Claimed"
+    },
+    "Mohanpur": {
+      "Ref Min Temp": 7.5,
+      "Obsrved Min Temp": 9.380998700930771,
+      "Claim Status": "Non Claimed"
+    },
+    "Paba": {
+      "Ref Min Temp": 7.5,
+      "Obsrved Min Temp": 10.02477715588725,
+      "Claim Status": "Non Claimed"
+    },
+    "Puthia": {
+      "Ref Min Temp": 7.5,
+      "Obsrved Min Temp": 9.601511702999016,
+      "Claim Status": "Non Claimed"
+    },
+    "Tanore": {
+      "Ref Min Temp": 7.5,
+      "Obsrved Min Temp": 10.15623872401353,
+      "Claim Status": "Non Claimed"
+    }
+  },
+  "Thakurgaon": {
+    "Baliadangi": {
+      "Ref Min Temp": 7.0,
+      "Obsrved Min Temp": 10.17002766927086,
+      "Claim Status": "Non Claimed"
+    },
+    "Haripur": {
+      "Ref Min Temp": 7.0,
+      "Obsrved Min Temp": 9.939973015185249,
+      "Claim Status": "Non Claimed"
+    },
+    "Pirganj": {
+      "Ref Min Temp": 7.0,
+      "Obsrved Min Temp": 10.35200489185477,
+      "Claim Status": "Non Claimed"
+    },
+    "Ranishankail": {
+      "Ref Min Temp": 7.0,
+      "Obsrved Min Temp": 10.2964235617898,
+      "Claim Status": "Non Claimed"
+    },
+    "Thakurgaon Sadar": {
+      "Ref Min Temp": 7.0,
+      "Obsrved Min Temp": 9.954448705451275,
+      "Claim Status": "Non Claimed"
+    }
+  },
+  "Kushtia": {
+    "Bheramara": {
+      "Ref Min Temp": 8.0,
+      "Obsrved Min Temp": 9.894250488281273,
+      "Claim Status": "Non Claimed"
+    },
+    "Daulatpur": {
+      "Ref Min Temp": 8.0,
+      "Obsrved Min Temp": 9.6647995639855,
+      "Claim Status": "Non Claimed"
+    },
+    "Khoksa": {
+      "Ref Min Temp": 8.0,
+      "Obsrved Min Temp": 9.44721218077077,
+      "Claim Status": "Non Claimed"
+    },
+    "Kumarkhali": {
+      "Ref Min Temp": 8.0,
+      "Obsrved Min Temp": 10.19555104769951,
+      "Claim Status": "Non Claimed"
+    },
+    "Kushtia Sadar": {
+      "Ref Min Temp": 7.5,
+      "Obsrved Min Temp": 10.20814983088798,
+      "Claim Status": "Non Claimed"
+    },
+    "Mirpur": {
+      "Ref Min Temp": 8.0,
+      "Obsrved Min Temp": 9.62964338101703,
+      "Claim Status": "Non Claimed"
+    }
+  },
+  "Kurigram": {
+    "Bhurungamari": {
+      "Ref Min Temp": 8.0,
+      "Obsrved Min Temp": 10.58374912861163,
+      "Claim Status": "Non Claimed"
+    },
+    "Chilmari": {
+      "Ref Min Temp": 8.0,
+      "Obsrved Min Temp": 9.95018186974581,
+      "Claim Status": "Non Claimed"
+    },
+    "Kurigram Sadar": {
+      "Ref Min Temp": 8.0,
+      "Obsrved Min Temp": 9.976159222206396,
+      "Claim Status": "Non Claimed"
+    },
+    "Nageshwari": {
+      "Ref Min Temp": 8.0,
+      "Obsrved Min Temp": 10.77529240265667,
+      "Claim Status": "Non Claimed"
+    },
+    "Phulbari": {
+      "Ref Min Temp": 8.0,
+      "Obsrved Min Temp": 9.572427510769591,
+      "Claim Status": "Non Claimed"
+    },
+    "Rajarhat": {
+      "Ref Min Temp": 8.0,
+      "Obsrved Min Temp": 9.851720868167128,
+      "Claim Status": "Non Claimed"
+    },
+    "Rajibpur": {
+      "Ref Min Temp": 8.0,
+      "Obsrved Min Temp": 10.30788598632815,
+      "Claim Status": "Non Claimed"
+    },
+    "Roumari": {
+      "Ref Min Temp": 8.0,
+      "Obsrved Min Temp": 10.35066347071014,
+      "Claim Status": "Non Claimed"
+    },
+    "Ulipur": {
+      "Ref Min Temp": 8.0,
+      "Obsrved Min Temp": 9.995066252647954,
+      "Claim Status": "Non Claimed"
+    }
+  },
+  "Dinajpur": {
+    "Birampur": {
+      "Ref Min Temp": 7.0,
+      "Obsrved Min Temp": 9.888218171739643,
+      "Claim Status": "Non Claimed"
+    },
+    "Birganj": {
+      "Ref Min Temp": 7.0,
+      "Obsrved Min Temp": 9.658224404326404,
+      "Claim Status": "Non Claimed"
+    },
+    "Birol": {
+      "Ref Min Temp": 7.0,
+      "Obsrved Min Temp": 9.887472949867652,
+      "Claim Status": "Non Claimed"
+    },
+    "Bochaganj": {
+      "Ref Min Temp": 7.0,
+      "Obsrved Min Temp": 9.587852265563216,
+      "Claim Status": "Non Claimed"
+    },
+    "Chirirbandar": {
+      "Ref Min Temp": 7.0,
+      "Obsrved Min Temp": 9.649256183910625,
+      "Claim Status": "Non Claimed"
+    },
+    "Dinajpur Sadar": {
+      "Ref Min Temp": 7.0,
+      "Obsrved Min Temp": 9.56219195999915,
+      "Claim Status": "Non Claimed"
+    },
+    "Fulbari": {
+      "Ref Min Temp": 7.0,
+      "Obsrved Min Temp": 10.11253766146575,
+      "Claim Status": "Non Claimed"
+    },
+    "Ghoraghat": {
+      "Ref Min Temp": 7.0,
+      "Obsrved Min Temp": 10.02547808408198,
+      "Claim Status": "Non Claimed"
+    },
+    "Hakimpur": {
+      "Ref Min Temp": 7.0,
+      "Obsrved Min Temp": 9.82149073722039,
+      "Claim Status": "Non Claimed"
+    },
+    "Kaharole": {
+      "Ref Min Temp": 7.0,
+      "Obsrved Min Temp": 9.54109880460484,
+      "Claim Status": "Non Claimed"
+    },
+    "Khansama": {
+      "Ref Min Temp": 7.0,
+      "Obsrved Min Temp": 9.992211914062525,
+      "Claim Status": "Non Claimed"
+    },
+    "Nababganj": {
+      "Ref Min Temp": 7.0,
+      "Obsrved Min Temp": 9.57070243403599,
+      "Claim Status": "Non Claimed"
+    },
+    "Parbatipur": {
+      "Ref Min Temp": 7.0,
+      "Obsrved Min Temp": 9.794641113281273,
+      "Claim Status": "Non Claimed"
+    }
+  },
+  "Nilphamari": {
+    "Dimla": {
+      "Ref Min Temp": 7.5,
+      "Obsrved Min Temp": 9.91564001464846,
+      "Claim Status": "Non Claimed"
+    },
+    "Domar": {
+      "Ref Min Temp": 7.5,
+      "Obsrved Min Temp": 10.38260918903009,
+      "Claim Status": "Non Claimed"
+    },
+    "Jaldhaka": {
+      "Ref Min Temp": 7.5,
+      "Obsrved Min Temp": 9.422207573335257,
+      "Claim Status": "Non Claimed"
+    },
+    "Kishoreganj": {
+      "Ref Min Temp": 7.5,
+      "Obsrved Min Temp": 9.630914306640648,
+      "Claim Status": "Non Claimed"
+    },
+    "Nilphamari Sadar": {
+      "Ref Min Temp": 7.0,
+      "Obsrved Min Temp": 10.17486521228211,
+      "Claim Status": "Non Claimed"
+    },
+    "Saidpur": {
+      "Ref Min Temp": 7.0,
+      "Obsrved Min Temp": 9.64571533203127,
+      "Claim Status": "Non Claimed"
+    }
+  },
+  "Gaibandha": {
+    "Fulchhari": {
+      "Ref Min Temp": 8.0,
+      "Obsrved Min Temp": 9.820378161260122,
+      "Claim Status": "Non Claimed"
+    },
+    "Gaibandha Sadar": {
+      "Ref Min Temp": 8.0,
+      "Obsrved Min Temp": 9.438093078789196,
+      "Claim Status": "Non Claimed"
+    },
+    "Gobindaganj": {
+      "Ref Min Temp": 7.0,
+      "Obsrved Min Temp": 10.03041534755303,
+      "Claim Status": "Non Claimed"
+    },
+    "Palashbari": {
+      "Ref Min Temp": 8.0,
+      "Obsrved Min Temp": 9.143955659412224,
+      "Claim Status": "Non Claimed"
+    },
+    "Sadullapur": {
+      "Ref Min Temp": 7.5,
+      "Obsrved Min Temp": 9.729704026442333,
+      "Claim Status": "Non Claimed"
+    },
+    "Saghata": {
+      "Ref Min Temp": 7.5,
+      "Obsrved Min Temp": 10.16378548930378,
+      "Claim Status": "Non Claimed"
+    },
+    "Sundarganj": {
+      "Ref Min Temp": 7.5,
+      "Obsrved Min Temp": 9.716623585930751,
+      "Claim Status": "Non Claimed"
+    }
+  },
+  "Meherpur": {
+    "Gangni": {
+      "Ref Min Temp": 7.5,
+      "Obsrved Min Temp": 9.822937605499709,
+      "Claim Status": "Non Claimed"
+    },
+    "Meherpur Sadar": {
+      "Ref Min Temp": 7.5,
+      "Obsrved Min Temp": 9.931744186277337,
+      "Claim Status": "Non Claimed"
+    },
+    "Mujibnagar": {
+      "Ref Min Temp": 7.5,
+      "Obsrved Min Temp": 9.828980254268776,
+      "Claim Status": "Non Claimed"
+    }
+  },
+  "Jhenaidah": {
+    "Harinakundu": {
+      "Ref Min Temp": 8.0,
+      "Obsrved Min Temp": 10.03342044029709,
+      "Claim Status": "Non Claimed"
+    },
+    "Jhenaidah Sadar": {
+      "Ref Min Temp": 8.0,
+      "Obsrved Min Temp": 9.295881204461132,
+      "Claim Status": "Non Claimed"
+    },
+    "Kaliganj": {
+      "Ref Min Temp": 8.0,
+      "Obsrved Min Temp": 9.53703528115918,
+      "Claim Status": "Non Claimed"
+    },
+    "Kotchandpur": {
+      "Ref Min Temp": 8.0,
+      "Obsrved Min Temp": 10.00006221331479,
+      "Claim Status": "Non Claimed"
+    },
+    "Maheshpur": {
+      "Ref Min Temp": 8.0,
+      "Obsrved Min Temp": 9.308679272637166,
+      "Claim Status": "Non Claimed"
+    },
+    "Shailkupa": {
+      "Ref Min Temp": 8.0,
+      "Obsrved Min Temp": 9.89567065383451,
+      "Claim Status": "Non Claimed"
+    }
+  }
+}
