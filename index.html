@@ -13,7 +13,6 @@ body {margin:0; display:flex; justify-content:center; align-items:center; height
 .wrapper {height:100vh; aspect-ratio:16/9; background:white;}
 table {width:100%; height:100%; border-collapse:collapse;}
 td {border:1px solid black; text-align:center; font-size:14px; vertical-align:middle;}
-
 select {width:95%; padding:3px; font-size:14px;}
 #map {width:100%; height:100%;}
 .stat {font-weight:bold; font-size:18px;}
@@ -23,19 +22,15 @@ select {width:95%; padding:3px; font-size:14px;}
 
 <body>
 <div class="wrapper">
-
 <table>
-
 <tr height="5%">
 <td colspan="4" class="title">Cold Wave (WIB) Insurance Claim Status</td>
 </tr>
 
 <tr height="95%">
-
 <!-- LEFT -->
 <td width="40%" colspan="2">
 <table>
-
 <tr height="5%">
 <td><select id="districtSelect"></select></td>
 <td><select id="upazilaSelect"></select></td>
@@ -48,14 +43,12 @@ select {width:95%; padding:3px; font-size:14px;}
 <tr height="5%">
 <td colspan="2">© Sumon</td>
 </tr>
-
 </table>
 </td>
 
 <!-- RIGHT -->
 <td width="60%" colspan="2">
 <table>
-
 <tr height="25%">
 <td class="stat" id="claimedBox">Claimed: 0</td>
 <td class="stat" id="nonClaimedBox">Non-Claimed: 0</td>
@@ -69,30 +62,31 @@ select {width:95%; padding:3px; font-size:14px;}
 <tr height="50%">
 <td colspan="2"><canvas id="chart"></canvas></td>
 </tr>
-
 </table>
 </td>
-
 </tr>
-
 </table>
-
 </div>
 
 <script>
-
 // ---------- MAP INIT ----------
 let map = L.map('map').setView([23.5, 90.3], 7);
-L.tileLayer('https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
-  subdomains:['mt0','mt1','mt2','mt3']
+
+// Google Maps Layers
+let googleStreets = L.tileLayer('https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {subdomains:['mt0','mt1','mt2','mt3']});
+let googleSat = L.tileLayer('https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {subdomains:['mt0','mt1','mt2','mt3']});
+googleStreets.addTo(map);
+
+// Layer toggle
+L.control.layers({
+  'Google Streets': googleStreets,
+  'Google Satellite': googleSat
 }).addTo(map);
 
 let geoLayer, dataJSON={}, termJSON={}, chart;
 
 // ---------- CLEAN FUNCTION ----------
-function clean(str){
-  return str ? str.toString().trim().toLowerCase() : '';
-}
+function clean(str){ return str ? str.toString().trim().toLowerCase() : ''; }
 
 // ---------- LOAD DATA ----------
 Promise.all([
@@ -142,7 +136,6 @@ function loadMap(geo){
  geoLayer = L.geoJSON(geo,{
    style: styleFeature,
    onEachFeature: (feature, layer)=>{
-
      layer.on('click', ()=>{
        let d = feature.properties.adm2_name;
        let u = feature.properties.adm3_name;
@@ -155,7 +148,6 @@ function loadMap(geo){
        updateStats();
        updateChart();
      });
-
    }
  }).addTo(map);
 
@@ -165,19 +157,15 @@ function loadMap(geo){
 
 // ---------- STYLE ----------
 function styleFeature(feature){
-
  let d = clean(feature.properties.adm2_name);
  let u = clean(feature.properties.adm3_name);
-
  let fill = 'transparent';
 
  for(let dist in termJSON){
    if(clean(dist) === d){
      for(let up in termJSON[dist]){
        if(clean(up) === u){
-
          let status = termJSON[dist][up]["Claim Status"];
-
          if(status === "Claimed") fill = 'red';
          else if(status === "Non-Claimed" || status === "Non Claimed") fill = 'green';
        }
@@ -185,28 +173,17 @@ function styleFeature(feature){
    }
  }
 
- return {
-   color:'blue',
-   weight:1,
-   fillColor:fill,
-   fillOpacity: fill==='transparent'?0:0.6
- };
+ return { color:'blue', weight:1, fillColor:fill, fillOpacity: fill==='transparent'?0:0.6 };
 }
 
 // ---------- REFRESH MAP ----------
-function refreshMap(){
- geoLayer.eachLayer(l=>{
-   l.setStyle(styleFeature(l.feature));
- });
-}
+function refreshMap(){ geoLayer.eachLayer(l=> l.setStyle(styleFeature(l.feature))); }
 
 // ---------- ZOOM ----------
 function zoomToUpazila(d,u){
  geoLayer.eachLayer(layer=>{
-   let ld = layer.feature.properties.adm2_name;
-   let lu = layer.feature.properties.adm3_name;
-
-   if(clean(ld) === clean(d) && clean(lu) === clean(u)){
+   if(clean(layer.feature.properties.adm2_name) === clean(d) &&
+      clean(layer.feature.properties.adm3_name) === clean(u)){
      map.fitBounds(layer.getBounds());
    }
  });
@@ -216,10 +193,9 @@ function zoomToUpazila(d,u){
 function updateStats(){
  let d = districtSelect.value;
  let u = upazilaSelect.value;
-
  let claimed=0, non=0;
 
- Object.values(termJSON[d] || {}).forEach(obj=>{
+ Object.entries(termJSON[d] || {}).forEach(([up, obj])=>{
    let status = obj["Claim Status"];
    if(status === "Claimed") claimed++;
    else if(status === "Non-Claimed" || status === "Non Claimed") non++;
@@ -240,13 +216,11 @@ function updateChart(){
  let d = districtSelect.value;
  let u = upazilaSelect.value;
  let series = dataJSON[d]?.[u];
-
  if(!series) return;
 
  let labels = Object.keys(series);
  let values = labels.map(k=>parseFloat(series[k].toFixed(2)));
  let ref = termJSON[d]?.[u]?.["Ref Min Temp"] || 0;
-
  let colors = values.map(v => v <= ref ? 'red' : 'blue');
 
  if(chart) chart.destroy();
@@ -255,23 +229,14 @@ function updateChart(){
    type:'line',
    data:{
      labels:labels,
-     datasets:[{
-       data:values,
-       borderColor:'blue',
-       pointBackgroundColor:colors,
-       tension:0.3
-     }]
+     datasets:[{data:values, borderColor:'blue', pointBackgroundColor:colors, tension:0.3}]
    },
    options:{
      plugins:{legend:{display:false}},
-     scales:{
-       y:{title:{display:true,text:'Temp (°C)'}}
-     }
+     scales:{y:{title:{display:true,text:'Temp (°C)'}}}
    }
  });
 }
-
 </script>
-
 </body>
 </html>
