@@ -2,208 +2,231 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Coastal Small-Scale Fishing Communities Dashboard</title>
+<title>Cold Wave (WIB) Insurance Claim Status</title>
+
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/leaflet-providers/leaflet-providers.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
 <style>
-html, body {margin:0; padding:0; height:100%; font-family:'Times New Roman', serif;}
-#topbar {display:flex; flex-direction:column; justify-content:center; align-items:center; background:orange; text-align:center; padding:5px 5px; height:auto;}
-#topbar h2 {margin:0; font-size:22px; color:white;}
-#dropdowns {margin-top:3px; display:flex; justify-content:center; gap:6px;}
-#dropdowns select {font-family:'Times New Roman'; font-size:16px; color:blue; padding:3px;}
-#stats {display:flex; justify-content:space-around; margin:4px 0;}
-.stat-box {background:#f2f2f2; padding:6px 10px; border-radius:4px; font-size:14px; text-align:center;}
-#mapContainer {height:60%; position:relative;}
+body {margin:0; display:flex; justify-content:center; align-items:center; height:100vh; background:#eee;}
+.wrapper {height:100vh; aspect-ratio:16/9; background:white;}
+table {width:100%; height:100%; border-collapse:collapse;}
+td {border:1px solid black; text-align:center; font-size:14px; vertical-align:middle;}
+
+select {width:95%; padding:3px; font-size:14px;}
 #map {width:100%; height:100%;}
-#chartContainer {height:30%; padding:5px;}
-#sourceCredit {height:auto; display:flex; justify-content:center; align-items:center; font-size:12px; text-align:center; padding:2px;}
-.district-label {font-family:'Times New Roman'; font-size:12.5px; text-align:center; pointer-events:none;}
-.legend {position:absolute; bottom:15px; left:15px; background:white; padding:6px 10px; border-radius:4px; font-size:12px; line-height:1.2; box-shadow:0 0 4px rgba(0,0,0,0.3); z-index:1000; max-width:350px; min-width:120px;}
-.legend-title {font-weight:bold; margin-bottom:2px;}
-.legend-item {display:flex; align-items:center; gap:6px; margin-bottom:2px;}
-.legend-color {width:20px; height:20px; display:inline-block;}
+.stat {font-weight:bold; font-size:18px;}
+.title {font-size:20px; font-weight:bold; color:red;}
 </style>
 </head>
+
 <body>
+<div class="wrapper">
 
-<div id="topbar">
-  <h2>Coastal Small-Scale Fishing Communities Dashboard</h2>
-  <div id="dropdowns">
-    <select id="districtSelect"><option>Loading...</option></select>
-    <select id="upazilaSelect"><option>Select District First</option></select>
-  </div>
-  <div id="stats">
-    <div class="stat-box" id="claimedCount">Total Claimed Upazila: 0</div>
-    <div class="stat-box" id="nonClaimedCount">Total Non-Claimed Upazila: 0</div>
-    <div class="stat-box" id="refMinTemp">Ref Min Temp: 0</div>
-    <div class="stat-box" id="obsMinTemp">Observed Min Temp: 0</div>
-  </div>
-</div>
+<table>
 
-<div id="mapContainer">
-  <div id="map"></div>
-  <div id="legend" class="legend"></div>
-</div>
+<tr height="5%">
+<td colspan="4" class="title">Cold Wave (WIB) Insurance Claim Status</td>
+</tr>
 
-<div id="chartContainer">
-  <canvas id="tempChart"></canvas>
-</div>
+<tr height="95%">
 
-<div id="sourceCredit">
-Data source: <a href="#" target="_blank">Termsheet & Data</a> | © <a href="https://www.linkedin.com/in/md-sumon-ali-992b91214/" target="_blank">Sumon</a>
+<!-- LEFT -->
+<td width="40%" colspan="2">
+<table>
+
+<tr height="5%">
+<td>
+<select id="districtSelect"></select>
+</td>
+<td>
+<select id="upazilaSelect"></select>
+</td>
+</tr>
+
+<tr height="90%">
+<td colspan="2"><div id="map"></div></td>
+</tr>
+
+<tr height="5%">
+<td colspan="2">© Sumon</td>
+</tr>
+
+</table>
+</td>
+
+<!-- RIGHT -->
+<td width="60%" colspan="2">
+<table>
+
+<tr height="25%">
+<td class="stat" id="claimedBox">Claimed: 0</td>
+<td class="stat" id="nonClaimedBox">Non-Claimed: 0</td>
+</tr>
+
+<tr height="25%">
+<td class="stat" id="refTemp">Triggered Temp: -</td>
+<td class="stat" id="obsTemp">Observed Temp: -</td>
+</tr>
+
+<tr height="50%">
+<td colspan="2"><canvas id="chart"></canvas></td>
+</tr>
+
+</table>
+</td>
+
+</tr>
+
+</table>
+
 </div>
 
 <script>
-let map = L.map('map').setView([23.0, 90.0], 7);
-L.tileLayer('https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {subdomains:['mt0','mt1','mt2','mt3']}).addTo(map);
+let map = L.map('map').setView([23.5, 90.3], 7);
+L.tileLayer('https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+  subdomains:['mt0','mt1','mt2','mt3']
+}).addTo(map);
 
-let geoLayer=null, selectedLayer=null;
-let dataJSON={}, termsheetJSON={};
-const districtSelect = document.getElementById('districtSelect');
-const upazilaSelect = document.getElementById('upazilaSelect');
-const claimedBox = document.getElementById('claimedCount');
-const nonClaimedBox = document.getElementById('nonClaimedCount');
-const refBox = document.getElementById('refMinTemp');
-const obsBox = document.getElementById('obsMinTemp');
-let tempChart=null;
+let geoLayer, dataJSON={}, termJSON={}, chart;
 
-// Load all JSON
+// Load all
 Promise.all([
-  fetch('upazilas.geojson').then(r=>r.json()),
-  fetch('Data.json').then(r=>r.json()),
-  fetch('Termsheet.json').then(r=>r.json())
-]).then(([geojson, data, termsheet])=>{
-  dataJSON = data;
-  termsheetJSON = termsheet;
+ fetch('upazilas.geojson').then(r=>r.json()),
+ fetch('Data.json').then(r=>r.json()),
+ fetch('Termsheet.json').then(r=>r.json())
+]).then(([geo, data, term])=>{
+ dataJSON = data;
+ termJSON = term;
 
-  // Populate district dropdown
-  let districts = Object.keys(dataJSON).sort();
-  districtSelect.innerHTML = districts.map(d=>`<option value="${d}">${d}</option>`).join('');
-
-  // Load map
-  geoLayer = L.geoJSON(geojson, {style:styleFeature,onEachFeature:onEachFeature}).addTo(map);
-  map.fitBounds(geoLayer.getBounds());
-
-  districtSelect.addEventListener('change', districtChanged);
-  upazilaSelect.addEventListener('change', upazilaChanged);
-
-  updateStats();
-  updateChart();
-  updateLegend();
+ initDropdowns();
+ loadMap(geo);
+ updateStats();
+ updateChart();
 });
 
-// Style polygons
+// Dropdown init
+function initDropdowns(){
+ let districts = Object.keys(dataJSON);
+ districtSelect.innerHTML = districts.map(d=>`<option>${d}</option>`).join('');
+ updateUpazila();
+
+ districtSelect.onchange = ()=>{
+   updateUpazila();
+   updateStats();
+   updateChart();
+   geoLayer.eachLayer(l=>l.setStyle(styleFeature(l.feature)));
+ };
+
+ upazilaSelect.onchange = ()=>{
+   updateStats();
+   updateChart();
+ };
+}
+
+function updateUpazila(){
+ let d = districtSelect.value;
+ let ups = Object.keys(dataJSON[d]);
+ upazilaSelect.innerHTML = ups.map(u=>`<option>${u}</option>`).join('');
+}
+
+// Map
+function loadMap(geo){
+ geoLayer = L.geoJSON(geo,{
+   style: styleFeature,
+   onEachFeature: (f,l)=>{
+     l.on('click', ()=>{
+       districtSelect.value = f.properties.adm2_name;
+       updateUpazila();
+       upazilaSelect.value = f.properties.adm3_name;
+       updateStats();
+       updateChart();
+     });
+   }
+ }).addTo(map);
+
+ map.fitBounds(geoLayer.getBounds());
+}
+
+// Style logic
 function styleFeature(feature){
-  return {fillColor:'#88c0a0', color:'white', weight:1, fillOpacity:0.7};
+ let d = feature.properties.adm2_name;
+ let u = feature.properties.adm3_name;
+
+ let status = termJSON[d]?.[u]?.["Claim Status"];
+
+ let fill = 'transparent';
+
+ if(status === "Claimed") fill = 'red';
+ else if(status === "Non Claimed") fill = 'green';
+
+ return {
+   color:'blue',
+   weight:1,
+   fillColor:fill,
+   fillOpacity: fill==='transparent'?0:0.6
+ };
 }
 
-// Tooltip & click
-function onEachFeature(feature, layer){
-  layer.on('mouseover', function(){
-    let upazila = feature.properties.adm3_name;
-    let district = feature.properties.adm2_name;
-    let temp = dataJSON[district]?.[upazila];
-    let html = `<div style="font-size:13px; line-height:1.3; background-color:#ffdee1; padding:3px; border-radius:4px;">
-      <strong>${upazila}, ${district}</strong><br>
-      Observed Min Temp: ${temp ? temp[Object.keys(temp).pop()].toFixed(2) : 'N/A'} °C<br>
-      Claim Status: ${termsheetJSON[district]?.[upazila]?.['Claim Status'] || 'N/A'}
-    </div>`;
-    layer.bindTooltip(html,{sticky:true,direction:'auto',opacity:1}).openTooltip();
-  });
-  layer.on('mouseout', ()=>layer.closeTooltip());
-
-  layer.on('click', function(){
-    if(selectedLayer) geoLayer.resetStyle(selectedLayer);
-    layer.setStyle({color:'blue', weight:3, fillOpacity:0.8});
-    selectedLayer = layer;
-    upazilaSelect.value = feature.properties.adm3_name;
-    updateStats();
-    updateChart();
-  });
-}
-
-// District → Upazila linkage
-function districtChanged(){
-  let district = districtSelect.value;
-  let upazilas = Object.keys(dataJSON[district]).sort();
-  upazilaSelect.innerHTML = upazilas.map(u=>`<option value="${u}">${u}</option>`).join('');
-  upazilaSelect.selectedIndex = 0;
-  updateStats();
-  updateChart();
-}
-
-function upazilaChanged(){
-  updateStats();
-  updateChart();
-}
-
-// Update Claimed/Non-Claimed & Min Temp
+// Stats
 function updateStats(){
-  let district = districtSelect.value;
-  let upazila = upazilaSelect.value;
-  let claimed=0, nonclaimed=0;
+ let d = districtSelect.value;
+ let u = upazilaSelect.value;
 
-  Object.keys(termsheetJSON[district]||{}).forEach(u=>{
-    if(termsheetJSON[district][u]['Claim Status']==='Claimed') claimed++; else nonclaimed++;
-  });
-  claimedBox.innerText = `Total Claimed Upazila: ${claimed}`;
-  nonClaimedBox.innerText = `Total Non-Claimed Upazila: ${nonclaimed}`;
+ let claimed=0, non=0;
 
-  let refMin = termsheetJSON[district]?.[upazila]?.['Ref Min Temp'] || 0;
-  let obsMin = termsheetJSON[district]?.[upazila]?.['Obsrved Min Temp'] || 0;
-  refBox.innerText = `Ref Min Temp: ${refMin.toFixed(2)}`;
-  obsBox.innerText = `Observed Min Temp: ${obsMin.toFixed(2)}`;
+ Object.keys(termJSON[d]||{}).forEach(x=>{
+   if(termJSON[d][x]["Claim Status"]==="Claimed") claimed++;
+   else non++;
+ });
+
+ claimedBox.innerText = "Claimed: "+claimed;
+ nonClaimedBox.innerText = "Non-Claimed: "+non;
+
+ let ref = termJSON[d]?.[u]?.["Ref Min Temp"];
+ let obs = termJSON[d]?.[u]?.["Obsrved Min Temp"];
+
+ refTemp.innerText = "Triggered Temp: "+(ref?ref.toFixed(2):'-');
+ obsTemp.innerText = "Observed Temp: "+(obs?obs.toFixed(2):'-');
 }
 
 // Chart
 function updateChart(){
-  let district = districtSelect.value;
-  let upazila = upazilaSelect.value;
-  let tempData = dataJSON[district]?.[upazila];
-  if(!tempData) return;
+ let d = districtSelect.value;
+ let u = upazilaSelect.value;
+ let series = dataJSON[d]?.[u];
 
-  let labels = Object.keys(tempData);
-  let values = labels.map(d=>parseFloat(tempData[d].toFixed(2)));
-  let pointColors = labels.map(d=>{
-    let ref = termsheetJSON[district]?.[upazila]?.['Ref Min Temp'] || 0;
-    return tempData[d] <= ref ? 'red':'blue';
-  });
+ if(!series) return;
 
-  if(tempChart) tempChart.destroy();
-  let ctx = document.getElementById('tempChart').getContext('2d');
-  tempChart = new Chart(ctx,{
-    type:'line',
-    data:{
-      labels: labels,
-      datasets:[{
-        label:`Observed Min Temp for ${upazila}`,
-        data: values,
-        borderColor:'blue',
-        backgroundColor:'rgba(0,0,255,0.1)',
-        pointBackgroundColor: pointColors,
-        pointRadius:4,
-        fill:true,
-        tension:0.3
-      }]
-    },
-    options:{
-      responsive:true,
-      plugins:{legend:{display:false}},
-      scales:{
-        y:{title:{display:true,text:'Temp (°C)'}}
-      }
-    }
-  });
-}
+ let labels = Object.keys(series);
+ let values = labels.map(k=>parseFloat(series[k].toFixed(2)));
+ let ref = termJSON[d]?.[u]?.["Ref Min Temp"] || 0;
 
-// Legend
-function updateLegend(){
-  let html = `<div class="legend-title">Map Legend</div>
-              <div class="legend-item"><span class="legend-color" style="background:#88c0a0"></span>Upazila</div>`;
-  document.getElementById('legend').innerHTML = html;
+ let colors = values.map(v=> v<=ref ? 'red':'blue');
+
+ if(chart) chart.destroy();
+
+ chart = new Chart(document.getElementById('chart'),{
+   type:'line',
+   data:{
+     labels:labels,
+     datasets:[{
+       data:values,
+       borderColor:'blue',
+       pointBackgroundColor:colors,
+       tension:0.3
+     }]
+   },
+   options:{
+     plugins:{legend:{display:false}},
+     scales:{
+       y:{title:{display:true,text:'Temp (°C)'}}
+     }
+   }
+ });
 }
 </script>
+
 </body>
 </html>
