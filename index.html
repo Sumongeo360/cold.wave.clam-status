@@ -78,7 +78,7 @@ select {width:95%; padding:3px; font-size:14px;}
 <script>
 let map = L.map('map').setView([23.5, 90.3], 7);
 
-// Google Layers
+// Layers
 let googleStreets = L.tileLayer(
 'https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
 {subdomains:['mt0','mt1','mt2','mt3']}
@@ -93,19 +93,27 @@ L.control.layers({'Google Streets': googleStreets,'Google Satellite': googleSat}
 
 let geoLayer, dataJSON={}, termJSON={}, chart;
 
+// ---------- CLEAN ----------
 function clean(str){
  return str ? str.toString().trim().toLowerCase() : '';
 }
 
-// ---------- LOAD ----------
+// ---------- TITLE CASE ----------
+function titleCase(str){
+ return str
+   ? str.toString().toLowerCase().replace(/\b\w/g, c => c.toUpperCase())
+   : '';
+}
+
+// ---------- LOAD DATA ----------
 Promise.all([
  fetch('upazilas.geojson').then(r=>r.json()),
  fetch('Data.json').then(r=>r.json()),
  fetch('Termsheet.json').then(r=>r.json())
 ]).then(([geo, data, term])=>{
 
- dataJSON = normalizeJSON(data);
- termJSON = normalizeJSON(term);
+ dataJSON = data;
+ termJSON = term;
 
  initDropdowns();
  loadMap(geo);
@@ -113,31 +121,19 @@ Promise.all([
  updateChart();
 });
 
-// ---------- NORMALIZE ----------
-function normalizeJSON(obj){
- let out = {};
- Object.keys(obj).forEach(d=>{
-   let dKey = clean(d);
-   out[dKey] = {};
-
-   Object.keys(obj[d]).forEach(u=>{
-     let uKey = clean(u);
-     out[dKey][uKey] = obj[d][u];
-   });
- });
- return out;
-}
-
-// ---------- DROPDOWN ----------
+// ---------- DROPDOWNS ----------
 function initDropdowns(){
+
  let districts = Object.keys(dataJSON);
 
- districtSelect.innerHTML = districts.map(d=>`<option>${d}</option>`).join('');
+ districtSelect.innerHTML =
+   districts.map(d => `<option value="${clean(d)}">${titleCase(d)}</option>`).join('');
+
  updateUpazila();
 
  districtSelect.onchange = ()=>{
    updateUpazila();
-   refreshMap();   // 🔥 instant color update
+   refreshMap();
    updateStats();
    updateChart();
  };
@@ -151,8 +147,11 @@ function initDropdowns(){
 
 function updateUpazila(){
  let d = clean(districtSelect.value);
- let ups = Object.keys(dataJSON[d] || {});
- upazilaSelect.innerHTML = ups.map(u=>`<option>${u}</option>`).join('');
+
+ upazilaSelect.innerHTML =
+   Object.keys(dataJSON[d] || {})
+     .map(u => `<option value="${clean(u)}">${titleCase(u)}</option>`)
+     .join('');
 }
 
 // ---------- MAP ----------
@@ -162,24 +161,13 @@ function loadMap(geo){
    onEachFeature: (feature, layer)=>{
 
      layer.on('click', ()=>{
+
+       let d = clean(feature.properties.adm2_name);
        let u = clean(feature.properties.adm3_name);
 
-       // find district
-       let foundDistrict = null;
-
-       Object.keys(termJSON).forEach(d=>{
-         Object.keys(termJSON[d]).forEach(up=>{
-           if(clean(up) === u){
-             foundDistrict = d;
-           }
-         });
-       });
-
-       if(foundDistrict){
-         districtSelect.value = foundDistrict;
-         updateUpazila();
-         upazilaSelect.value = u;
-       }
+       districtSelect.value = d;
+       updateUpazila();
+       upazilaSelect.value = u;
 
        zoomToUpazila(u);
        updateStats();
@@ -195,29 +183,25 @@ function loadMap(geo){
 
 // ---------- STYLE ----------
 function styleFeature(feature){
- let d = clean(districtSelect.value);
+
+ let d = clean(feature.properties.adm2_name);
  let u = clean(feature.properties.adm3_name);
 
  let fill = 'transparent';
 
- if(termJSON[d]){
-   let districtData = termJSON[d];
+ if(termJSON[d] && termJSON[d][u]){
 
-   Object.keys(districtData).forEach(up=>{
-     if(clean(up) === u){
-       let status = districtData[up]["Claim Status"];
+   let status = termJSON[d][u]["Claim Status"];
 
-       if(status === "Claimed") fill = 'red';
-       else if(status === "Non Claimed" || status === "Non-Claimed") fill = 'green';
-     }
-   });
+   if(status === "Claimed") fill = 'red';
+   else if(status === "Non Claimed" || status === "Non-Claimed") fill = 'green';
  }
 
  return {
    color:'blue',
    weight:1,
    fillColor:fill,
-   fillOpacity: fill==='transparent'?0:0.6
+   fillOpacity: fill === 'transparent' ? 0 : 0.6
  };
 }
 
@@ -238,33 +222,45 @@ function zoomToUpazila(u){
 
 // ---------- STATS ----------
 function updateStats(){
+
  let d = clean(districtSelect.value);
+ let u = clean(upazilaSelect.value);
 
- let claimed=0, non=0;
- let claimedList=[], nonList=[];
+ let claimed = 0;
+ let non = 0;
 
- Object.entries(termJSON[d] || {}).forEach(([u,obj])=>{
+ Object.entries(termJSON[d] || {}).forEach(([up,obj])=>{
    let status = obj["Claim Status"];
 
-   if(status === "Claimed"){
-     claimed++;
-     claimedList.push(u);
-   }
-   else if(status === "Non Claimed" || status === "Non-Claimed"){
-     non++;
-     nonList.push(u);
-   }
+   if(status === "Claimed") claimed++;
+   else if(status === "Non Claimed" || status === "Non-Claimed") non++;
  });
 
  claimedBox.innerText = "Claimed: " + claimed;
  nonClaimedBox.innerText = "Non-Claimed: " + non;
 
- claimedBox.onclick = ()=>downloadList(claimedList,"Claimed_Upazilas.txt");
- nonClaimedBox.onclick = ()=>downloadList(nonList,"NonClaimed_Upazilas.txt");
+ let obj = termJSON[d]?.[u];
+
+ let ref = obj?.["Ref Min Temp"];
+ let obs = obj?.["Obsrved Min Temp"];
+
+ refTemp.innerText = "Triggered Temp: " + (ref != null ? Number(ref).toFixed(2) : '-');
+ obsTemp.innerText = "Observed Temp: " + (obs != null ? Number(obs).toFixed(2) : '-');
+
+ claimedBox.onclick = ()=>downloadList(
+   Object.keys(termJSON[d] || {}).filter(k=>termJSON[d][k]["Claim Status"]==="Claimed"),
+   "Claimed_Upazilas.txt"
+ );
+
+ nonClaimedBox.onclick = ()=>downloadList(
+   Object.keys(termJSON[d] || {}).filter(k=>termJSON[d][k]["Claim Status"]!=="Claimed"),
+   "NonClaimed_Upazilas.txt"
+ );
 }
 
 // ---------- CHART ----------
 function updateChart(){
+
  let d = clean(districtSelect.value);
  let u = clean(upazilaSelect.value);
 
@@ -279,7 +275,7 @@ function updateChart(){
  let values = labels.map(k=>parseFloat(series[k].toFixed(2)));
 
  let ref = termJSON[d]?.[u]?.["Ref Min Temp"] || 0;
- let colors = values.map(v => v <= ref ? 'red':'blue');
+ let colors = values.map(v => v <= ref ? 'red' : 'blue');
 
  if(chart) chart.destroy();
 
