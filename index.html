@@ -2,278 +2,361 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Cold Wave (WIB) Insurance Claim Status</title>
+<title>Cold Wave Dashboard</title>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
-body {margin:0; display:flex; justify-content:center; align-items:center; height:100vh; background:#eee;}
-.wrapper {height:100vh; aspect-ratio:16/9; background:white;}
-table {width:100%; height:100%; border-collapse:collapse;}
-td {border:1px solid black; text-align:center; font-size:14px; vertical-align:middle;}
-select {width:95%; padding:3px; font-size:14px;}
-#map {width:100%; height:100%;}
-.stat {font-weight:bold; font-size:18px; cursor:pointer;}
-.title {font-size:20px; font-weight:bold; color:red;}
+body{
+ margin:0;
+ height:100vh;
+ width:100vw;
+ display:flex;
+ background:#e9eef5;
+ font-family:Arial;
+}
+
+.wrapper{
+ display:flex;
+ width:100%;
+ height:100%;
+}
+
+/* LEFT PANEL */
+.left{
+ width:40%;
+ background:#f7f9fc;
+ display:flex;
+ flex-direction:column;
+}
+
+.map{
+ flex:1;
+}
+
+.controls{
+ display:flex;
+ gap:5px;
+ padding:5px;
+}
+
+select{
+ flex:1;
+ padding:5px;
+}
+
+/* RIGHT PANEL */
+.right{
+ width:60%;
+ display:flex;
+ flex-direction:column;
+}
+
+/* TOP STATS */
+.stats{
+ display:flex;
+ gap:10px;
+ padding:10px;
+}
+
+.box{
+ flex:1;
+ padding:15px;
+ border-radius:8px;
+ font-weight:bold;
+ cursor:pointer;
+}
+
+.claimed{background:#d4f8d4;}
+.nonclaimed{background:#ffd6d6;}
+
+/* TEMP */
+.temp{
+ display:flex;
+ gap:10px;
+ padding:10px;
+}
+
+.tempBox{
+ flex:1;
+ background:#fff3cd;
+ padding:10px;
+ border-radius:8px;
+ font-weight:bold;
+}
+
+/* CHART */
+.chartBox{
+ flex:1;
+ background:#ffffff;
+ display:flex;
+ justify-content:center;
+ align-items:center;
+ padding:10px;
+}
+
+.errorText{
+ color:red;
+ font-size:20px;
+ font-weight:bold;
+}
+
 </style>
 </head>
 
 <body>
+
 <div class="wrapper">
-<table>
-
-<tr height="5%">
-<td colspan="4" class="title">Cold Wave (WIB) Insurance Claim Status</td>
-</tr>
-
-<tr height="95%">
 
 <!-- LEFT -->
-<td width="40%" colspan="2">
-<table>
+<div class="left">
 
-<tr height="5%">
-<td><select id="districtSelect"></select></td>
-<td><select id="upazilaSelect"></select></td>
-</tr>
+<div class="controls">
+<select id="district"></select>
+<select id="upazila"></select>
+</div>
 
-<tr height="90%">
-<td colspan="2"><div id="map"></div></td>
-</tr>
+<div id="map" class="map"></div>
 
-<tr height="5%">
-<td colspan="2">© <a href="https://www.linkedin.com/in/md-sumon-ali-992b91214/" target="_blank">Sumon</a></td>
-</tr>
-
-</table>
-</td>
+</div>
 
 <!-- RIGHT -->
-<td width="60%" colspan="2">
-<table>
+<div class="right">
 
-<tr height="25%">
-<td class="stat" id="claimedBox">Claimed: 0</td>
-<td class="stat" id="nonClaimedBox">Non-Claimed: 0</td>
-</tr>
+<div class="stats">
+<div class="box claimed" id="claimedBox">Claimed: 0</div>
+<div class="box nonclaimed" id="nonClaimedBox">Non-Claimed: 0</div>
+</div>
 
-<tr height="25%">
-<td class="stat" id="refTemp">Triggered Temp: -</td>
-<td class="stat" id="obsTemp">Observed Temp: -</td>
-</tr>
+<div class="temp">
+<div class="tempBox" id="refTemp">Triggered Temp: -</div>
+<div class="tempBox" id="obsTemp">Observed Temp: -</div>
+</div>
 
-<tr height="50%">
-<td colspan="2"><canvas id="chart"></canvas></td>
-</tr>
+<div class="chartBox" id="chartBox">
+<canvas id="chart"></canvas>
+</div>
 
-</table>
-</td>
+</div>
 
-</tr>
-</table>
 </div>
 
 <script>
-let map = L.map('map').setView([23.5, 90.3], 7);
 
-let googleStreets = L.tileLayer(
-'https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
-{subdomains:['mt0','mt1','mt2','mt3']}
-).addTo(map);
+let map = L.map('map').setView([23.5,90.3],7);
 
-let googleSat = L.tileLayer(
-'https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
-{subdomains:['mt0','mt1','mt2','mt3']}
-);
+L.tileLayer('https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',{
+ subdomains:['mt0','mt1','mt2','mt3']
+}).addTo(map);
 
-L.control.layers({'Google Streets': googleStreets,'Google Satellite': googleSat}).addTo(map);
+let geoLayer;
+let chart;
 
-let geoLayer, dataJSON={}, termJSON={}, chart;
+let dataJSON={}, termJSON={};
 
-// ================= CLEAN =================
-function clean(str){
- return str ? str.toString().trim() : '';
-}
-
-// ================= LOAD =================
+/* ================= LOAD ================= */
 Promise.all([
  fetch('upazilas.geojson').then(r=>r.json()),
  fetch('Data.json').then(r=>r.json()),
  fetch('Termsheet.json').then(r=>r.json())
-]).then(([geo, data, term])=>{
+]).then(([geo,data,term])=>{
 
- dataJSON = data;
- termJSON = term;
+ dataJSON=data;
+ termJSON=term;
 
- initDropdowns();
+ init();
  loadMap(geo);
- updateStats();
- updateChart();
 });
 
-// ================= DROPDOWN =================
-function initDropdowns(){
+/* ================= CLEAN ================= */
+function clean(v){
+ return v ? v.toString().trim() : '';
+}
 
- districtSelect.innerHTML =
-   Object.keys(dataJSON)
-     .map(d=>`<option value="${d}">${d}</option>`)
-     .join('');
+/* ================= INIT ================= */
+function init(){
+
+ district.innerHTML = Object.keys(dataJSON)
+ .map(d=>`<option value="${d}">${d}</option>`)
+ .join('');
 
  updateUpazila();
 
- districtSelect.onchange = ()=>{
+ district.onchange = ()=>{
    updateUpazila();
    refreshMap();
    updateStats();
    updateChart();
  };
 
- upazilaSelect.onchange = ()=>{
-   zoomToUpazila(upazilaSelect.value);
-   updateStats();
-   updateChart();
+ upazila.onchange = ()=>{
+   syncFromDropdown();
  };
 }
 
+/* ================= UPAZILA ================= */
 function updateUpazila(){
- let d = districtSelect.value;
+ let d = district.value;
 
- upazilaSelect.innerHTML =
-   Object.keys(dataJSON[d] || {})
-     .map(u=>`<option value="${u}">${u}</option>`)
-     .join('');
+ upazila.innerHTML =
+ Object.keys(dataJSON[d] || {})
+ .map(u=>`<option value="${u}">${u}</option>`)
+ .join('');
 }
 
-// ================= MAP =================
+/* ================= MAP ================= */
 function loadMap(geo){
 
  geoLayer = L.geoJSON(geo,{
    style: styleFeature,
-   onEachFeature:(feature, layer)=>{
+   onEachFeature:(f,l)=>{
 
-     layer.on('click', ()=>{
+     l.on('click',()=>{
 
-       let d = feature.properties.adm2_name;
-       let u = feature.properties.adm3_name;
+       let d=f.properties.adm2_name;
+       let u=f.properties.adm3_name;
 
-       if(termJSON[d] && termJSON[d][u]){
+       if(termJSON[d]?.[u]){
 
-         districtSelect.value = d;
+         district.value=d;
          updateUpazila();
-         upazilaSelect.value = u;
+         upazila.value=u;
 
-         zoomToUpazila(u);
-         updateStats();
-         updateChart();
+         syncFromDropdown();
 
        } else {
-         alert("This upazila is not under Cold wave insurance.");
+         showError();
        }
      });
+
    }
  }).addTo(map);
 
  map.fitBounds(geoLayer.getBounds());
- refreshMap();
 }
 
-// ================= STYLE =================
-function styleFeature(feature){
+/* ================= STYLE ================= */
+function styleFeature(f){
 
- let d = districtSelect.value;
- let u = feature.properties.adm3_name;
+ let d=district.value;
+ let u=f.properties.adm3_name;
 
- let fill = 'transparent';
+ let fill='transparent';
 
- if(termJSON[d] && termJSON[d][u]){
-
-   let status = termJSON[d][u]["Claim Status"];
-
-   if(status === "Claimed") fill = 'red';
-   else if(status === "Non Claimed" || status === "Non-Claimed") fill = 'green';
+ if(termJSON[d]?.[u]){
+   let s=termJSON[d][u]["Claim Status"];
+   if(s==="Claimed") fill="red";
+   else fill="green";
  }
 
  return {
-   color:'blue',
+   color:"blue",
    weight:1,
    fillColor:fill,
-   fillOpacity: fill==='transparent'?0:0.6
+   fillOpacity:fill==="transparent"?0:0.6
  };
 }
 
 function refreshMap(){
- geoLayer.eachLayer(l=>{
-   l.setStyle(styleFeature(l.feature));
- });
+ geoLayer.setStyle(styleFeature);
 }
 
-// ================= ZOOM =================
-function zoomToUpazila(u){
- geoLayer.eachLayer(layer=>{
-   if(clean(layer.feature.properties.adm3_name) === clean(u)){
-     map.fitBounds(layer.getBounds());
+/* ================= SYNC ALL ================= */
+function syncFromDropdown(){
+
+ let d=district.value;
+ let u=upazila.value;
+
+ let obj=termJSON?.[d]?.[u];
+
+ updateStats(obj);
+ updateChart(d,u,obj);
+
+ refreshMap();
+}
+
+/* ================= STATS (FREEZE GLOBAL) ================= */
+function updateStats(obj){
+
+ let d=district.value;
+
+ let claimed=0, non=0;
+ let clist=[], nlist=[];
+
+ Object.entries(termJSON[d]||{}).forEach(([u,v])=>{
+   if(v["Claim Status"]==="Claimed"){
+     claimed++; clist.push(u);
+   } else {
+     non++; nlist.push(u);
    }
  });
+
+ claimedBox.innerText="Claimed: "+claimed;
+ nonClaimedBox.innerText="Non-Claimed: "+non;
+
+ claimedBox.onclick=()=>download(clist,"claimed_"+d+".txt");
+ nonClaimedBox.onclick=()=>download(nlist,"nonclaimed_"+d+".txt");
+
+ /* TEMP */
+ if(obj){
+   refTemp.innerText="Triggered Temp: "+obj["Ref Min Temp"];
+   obsTemp.innerText="Observed Temp: "+obj["Observed Min Temp"];
+ } else {
+   refTemp.innerText="Triggered Temp: -";
+   obsTemp.innerText="Observed Temp: -";
+ }
 }
 
-// ================= STATS =================
-function updateStats(){
+/* ================= CHART ================= */
+function updateChart(d,u,obj){
 
- let d = districtSelect.value;
- let u = upazilaSelect.value;
-
- let obj = termJSON?.[d]?.[u];
+ let box=document.getElementById("chartBox");
 
  if(!obj){
-   refTemp.innerText = "Triggered Temp: -";
-   obsTemp.innerText = "Observed Temp: -";
+   box.innerHTML='<div class="errorText">This upazila is not under Cold wave insurance.</div>';
    return;
  }
 
- refTemp.innerText = "Triggered Temp: " + (obj["Ref Min Temp"] ?? "-");
- obsTemp.innerText = "Observed Temp: " + (obj["Observed Min Temp"] ?? "-");
-}
+ box.innerHTML='<canvas id="chart"></canvas>';
 
-// ================= CHART =================
-function updateChart(){
+ let series=dataJSON[d][u];
 
- let d = districtSelect.value;
- let u = upazilaSelect.value;
-
- let series = dataJSON?.[d]?.[u];
-
- if(!series){
-   if(chart) chart.destroy();
-   return;
- }
-
- let labels = Object.keys(series);
- let values = labels.map(k=>Number(series[k]));
-
- let ref = termJSON?.[d]?.[u]?.["Ref Min Temp"] || 0;
-
- let colors = values.map(v => v <= ref ? 'red':'blue');
+ let labels=Object.keys(series);
+ let values=labels.map(k=>Number(series[k]));
 
  if(chart) chart.destroy();
 
- chart = new Chart(document.getElementById('chart'),{
-   type:'line',
+ chart=new Chart(document.getElementById("chart"),{
+   type:"line",
    data:{
      labels,
      datasets:[{
        data:values,
-       borderColor:'blue',
-       pointBackgroundColor:colors,
+       borderColor:"blue",
        tension:0.3
      }]
    },
-   options:{
-     plugins:{legend:{display:false}}
-   }
+   options:{plugins:{legend:{display:false}}}
  });
 }
+
+/* ================= DOWNLOAD ================= */
+function download(list,name){
+ let blob=new Blob([list.join("\n")],{type:"text/plain"});
+ let a=document.createElement("a");
+ a.href=URL.createObjectURL(blob);
+ a.download=name;
+ a.click();
+}
+
+/* ================= ERROR ================= */
+function showError(){
+ document.getElementById("chartBox").innerHTML =
+ '<div class="errorText">This upazila is not under Cold wave insurance.</div>';
+}
+
 </script>
 
 </body>
