@@ -2,310 +2,222 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Cold Wave (WIB) Insurance Claim Status</title>
+<title>Upazila Climate Dashboard</title>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
-body {margin:0; display:flex; justify-content:center; align-items:center; height:100vh; background:#eee;}
-.wrapper {height:100vh; aspect-ratio:16/9; background:white;}
-table {width:100%; height:100%; border-collapse:collapse;}
-td {border:1px solid black; text-align:center; font-size:14px; vertical-align:middle;}
-select {width:95%; padding:3px; font-size:14px;}
-#map {width:100%; height:100%;}
-.stat {font-weight:bold; font-size:18px; cursor:pointer;}
-.title {font-size:20px; font-weight:bold; color:red;}
+  body { margin:0; font-family: Arial; }
+
+  #map { height: 70vh; width: 100%; }
+
+  .panel {
+    display:flex;
+    gap:10px;
+    padding:10px;
+  }
+
+  select {
+    padding:5px;
+    width: 200px;
+  }
+
+  .box {
+    padding:10px;
+    background:#f4f4f4;
+    border-radius:6px;
+  }
 </style>
 </head>
 
 <body>
-<div class="wrapper">
-<table>
 
-<tr height="5%">
-<td colspan="4" class="title">Cold Wave (WIB) Insurance Claim Status</td>
-</tr>
+<div class="panel">
+  <select id="district"></select>
+  <select id="upazila"></select>
 
-<tr height="95%">
-
-<!-- LEFT -->
-<td width="40%" colspan="2">
-<table>
-
-<tr height="5%">
-<td><select id="districtSelect"></select></td>
-<td><select id="upazilaSelect"></select></td>
-</tr>
-
-<tr height="90%">
-<td colspan="2"><div id="map"></div></td>
-</tr>
-
-<tr height="5%">
-<td colspan="2">© <a href="https://www.linkedin.com/in/md-sumon-ali-992b91214/" target="_blank">Sumon</a></td>
-</tr>
-
-</table>
-</td>
-
-<!-- RIGHT -->
-<td width="60%" colspan="2">
-<table>
-
-<tr height="25%">
-<td class="stat" id="claimedBox">Claimed: 0</td>
-<td class="stat" id="nonClaimedBox">Non-Claimed: 0</td>
-</tr>
-
-<tr height="25%">
-<td class="stat" id="refTemp">Triggered Temp: -</td>
-<td class="stat" id="obsTemp">Observed Temp: -</td>
-</tr>
-
-<tr height="50%">
-<td colspan="2"><canvas id="chart"></canvas></td>
-</tr>
-
-</table>
-</td>
-
-</tr>
-</table>
+  <div class="box" id="refTemp">Triggered Temp: -</div>
+  <div class="box" id="obsTemp">Observed Temp: -</div>
 </div>
 
+<div id="map"></div>
+
 <script>
-let map = L.map('map').setView([23.5, 90.3], 7);
+let map = L.map('map').setView([23.7, 90.3], 7);
 
-// Layers
-let googleStreets = L.tileLayer(
-'https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
-{subdomains:['mt0','mt1','mt2','mt3']}
-).addTo(map);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  maxZoom: 18
+}).addTo(map);
 
-let googleSat = L.tileLayer(
-'https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
-{subdomains:['mt0','mt1','mt2','mt3']}
-);
+let geoLayer;
+let currentData = {};
 
-L.control.layers({'Google Streets': googleStreets,'Google Satellite': googleSat}).addTo(map);
+let districtSelect = document.getElementById("district");
+let upazilaSelect = document.getElementById("upazila");
 
-let geoLayer, dataJSON={}, termJSON={}, chart;
+let refTemp = document.getElementById("refTemp");
+let obsTemp = document.getElementById("obsTemp");
 
-// ---------- CLEAN ----------
-function clean(str){
- return str ? str.toString().trim().toLowerCase() : '';
+function clean(v){
+  return (v || "").toString().trim().toLowerCase();
 }
 
-// ---------- TITLE CASE ----------
 function titleCase(str){
- return str
-   ? str.toString().toLowerCase().replace(/\b\w/g, c => c.toUpperCase())
-   : '';
+  return (str || "")
+    .toString()
+    .toLowerCase()
+    .replace(/\b\w/g, c => c.toUpperCase());
 }
 
-// ---------- LOAD DATA ----------
-Promise.all([
- fetch('upazilas.geojson').then(r=>r.json()),
- fetch('Data.json').then(r=>r.json()),
- fetch('Termsheet.json').then(r=>r.json())
-]).then(([geo, data, term])=>{
+/* =========================
+   BUILD DATA STRUCTURE
+========================= */
+function buildData(json){
 
- dataJSON = data;
- termJSON = term;
+  let dObj = {};
 
- initDropdowns();
- loadMap(geo);
- updateStats();
- updateChart();
-});
+  json.forEach(f => {
 
-// ---------- DROPDOWNS ----------
-function initDropdowns(){
+    let d = clean(f.properties.adm2_name);
+    let u = clean(f.properties.adm3_name);
 
- let districts = Object.keys(dataJSON);
+    if(!dObj[d]) dObj[d] = {};
+    if(!dObj[d][u]) dObj[d][u] = [];
 
- districtSelect.innerHTML =
-   districts.map(d => `<option value="${clean(d)}">${titleCase(d)}</option>`).join('');
+    dObj[d][u].push(f);
+  });
 
- updateUpazila();
+  currentData = dObj;
 
- districtSelect.onchange = ()=>{
-   updateUpazila();
-   refreshMap();
-   updateStats();
-   updateChart();
- };
-
- upazilaSelect.onchange = ()=>{
-   zoomToUpazila(upazilaSelect.value);
-   updateStats();
-   updateChart();
- };
+  loadDistricts();
 }
 
+/* =========================
+   DISTRICT DROPDOWN
+========================= */
+function loadDistricts(){
+
+  districtSelect.innerHTML = Object.keys(currentData)
+    .map(d => `<option value="${d}">${titleCase(d)}</option>`)
+    .join('');
+
+  updateUpazila();
+}
+
+/* =========================
+   UPAZILA DROPDOWN
+========================= */
 function updateUpazila(){
- let d = clean(districtSelect.value);
 
- upazilaSelect.innerHTML =
-   Object.keys(dataJSON[d] || {})
-     .map(u => `<option value="${clean(u)}">${titleCase(u)}</option>`)
-     .join('');
+  let d = districtSelect.value;
+
+  upazilaSelect.innerHTML = Object.keys(currentData[d] || {})
+    .map(u => `<option value="${u}">${titleCase(u)}</option>`)
+    .join('');
+
+  updateAll();
 }
 
-// ---------- MAP ----------
-function loadMap(geo){
- geoLayer = L.geoJSON(geo,{
-   style: styleFeature,
-   onEachFeature: (feature, layer)=>{
-
-     layer.on('click', ()=>{
-
-       let d = clean(feature.properties.adm2_name);
-       let u = clean(feature.properties.adm3_name);
-
-       districtSelect.value = d;
-       updateUpazila();
-       upazilaSelect.value = u;
-
-       zoomToUpazila(u);
-       updateStats();
-       updateChart();
-     });
-
-   }
- }).addTo(map);
-
- map.fitBounds(geoLayer.getBounds());
- refreshMap();
-}
-
-// ---------- STYLE ----------
+/* =========================
+   MAP STYLE
+========================= */
 function styleFeature(feature){
 
- let d = clean(feature.properties.adm2_name);
- let u = clean(feature.properties.adm3_name);
+  let d = clean(feature.properties.adm2_name);
+  let u = clean(feature.properties.adm3_name);
 
- let fill = 'transparent';
+  let fill = "transparent";
 
- if(termJSON[d] && termJSON[d][u]){
+  let obj = currentData?.[d]?.[u]?.[0];
 
-   let status = termJSON[d][u]["Claim Status"];
+  if(obj){
 
-   if(status === "Claimed") fill = 'red';
-   else if(status === "Non Claimed" || status === "Non-Claimed") fill = 'green';
- }
+    let status = obj["Claim Status"];
 
- return {
-   color:'blue',
-   weight:1,
-   fillColor:fill,
-   fillOpacity: fill === 'transparent' ? 0 : 0.6
- };
+    if(status === "Claimed") fill = "red";
+    if(status === "Non Claimed" || status === "Non-Claimed") fill = "green";
+  }
+
+  return {
+    color: "blue",
+    weight: 1,
+    fillColor: fill,
+    fillOpacity: fill === "transparent" ? 0 : 0.6
+  };
 }
 
-function refreshMap(){
- geoLayer.eachLayer(l=>{
-   l.setStyle(styleFeature(l.feature));
- });
-}
-
-// ---------- ZOOM ----------
-function zoomToUpazila(u){
- geoLayer.eachLayer(layer=>{
-   if(clean(layer.feature.properties.adm3_name) === clean(u)){
-     map.fitBounds(layer.getBounds());
-   }
- });
-}
-
-// ---------- STATS ----------
+/* =========================
+   STATS UPDATE
+========================= */
 function updateStats(){
 
- let d = clean(districtSelect.value);
- let u = clean(upazilaSelect.value);
+  let d = districtSelect.value;
+  let u = upazilaSelect.value;
 
- let claimed = 0;
- let non = 0;
+  let obj = currentData?.[d]?.[u]?.[0];
 
- Object.entries(termJSON[d] || {}).forEach(([up,obj])=>{
-   let status = obj["Claim Status"];
+  let ref = obj?.["Ref Min Temp"];
+  let obs = obj?.["Observed Min Temp"];
 
-   if(status === "Claimed") claimed++;
-   else if(status === "Non Claimed" || status === "Non-Claimed") non++;
- });
+  refTemp.innerHTML =
+    "Triggered Temp: " +
+    (ref != null ? Number(ref).toFixed(2) : "-");
 
- claimedBox.innerText = "Claimed: " + claimed;
- nonClaimedBox.innerText = "Non-Claimed: " + non;
-
- let obj = termJSON[d]?.[u];
-
- let ref = obj?.["Ref Min Temp"];
- let obs = obj?.["Obsrved Min Temp"];
-
- refTemp.innerText = "Triggered Temp: " + (ref != null ? Number(ref).toFixed(2) : '-');
- obsTemp.innerText = "Observed Temp: " + (obs != null ? Number(obs).toFixed(2) : '-');
-
- claimedBox.onclick = ()=>downloadList(
-   Object.keys(termJSON[d] || {}).filter(k=>termJSON[d][k]["Claim Status"]==="Claimed"),
-   "Claimed_Upazilas.txt"
- );
-
- nonClaimedBox.onclick = ()=>downloadList(
-   Object.keys(termJSON[d] || {}).filter(k=>termJSON[d][k]["Claim Status"]!=="Claimed"),
-   "NonClaimed_Upazilas.txt"
- );
+  obsTemp.innerHTML =
+    "Observed Temp: " +
+    (obs != null ? Number(obs).toFixed(2) : "-");
 }
 
-// ---------- CHART ----------
-function updateChart(){
-
- let d = clean(districtSelect.value);
- let u = clean(upazilaSelect.value);
-
- let series = dataJSON[d]?.[u];
-
- if(!series){
-   if(chart) chart.destroy();
-   return;
- }
-
- let labels = Object.keys(series);
- let values = labels.map(k=>parseFloat(series[k].toFixed(2)));
-
- let ref = termJSON[d]?.[u]?.["Ref Min Temp"] || 0;
- let colors = values.map(v => v <= ref ? 'red' : 'blue');
-
- if(chart) chart.destroy();
-
- chart = new Chart(document.getElementById('chart'),{
-   type:'line',
-   data:{
-     labels:labels,
-     datasets:[{
-       data:values,
-       borderColor:'blue',
-       pointBackgroundColor:colors,
-       tension:0.3
-     }]
-   },
-   options:{
-     plugins:{legend:{display:false}},
-     scales:{y:{title:{display:true,text:'Temp (°C)'}}}
-   }
- });
+/* =========================
+   MAP REFRESH
+========================= */
+function refreshMap(){
+  if(geoLayer) geoLayer.setStyle(styleFeature);
 }
 
-// ---------- DOWNLOAD ----------
-function downloadList(list, filename){
- let blob = new Blob([list.join("\n")], {type:"text/plain"});
- let link = document.createElement("a");
- link.href = URL.createObjectURL(blob);
- link.download = filename;
- link.click();
- URL.revokeObjectURL(link.href);
+/* =========================
+   UPDATE ALL
+========================= */
+function updateAll(){
+  updateStats();
+  refreshMap();
 }
+
+/* =========================
+   CLICK HANDLER
+========================= */
+function onFeatureClick(e){
+
+  let d = clean(e.target.feature.properties.adm2_name);
+  let u = clean(e.target.feature.properties.adm3_name);
+
+  districtSelect.value = d;
+  updateUpazila();
+  upazilaSelect.value = u;
+
+  updateAll();
+}
+
+/* =========================
+   LOAD GEOJSON
+========================= */
+function loadGeoJSON(geojsonData){
+
+  geoLayer = L.geoJSON(geojsonData, {
+    style: styleFeature,
+    onEachFeature: function(feature, layer){
+      layer.on("click", onFeatureClick);
+    }
+  }).addTo(map);
+}
+
+/* =========================
+   EVENTS
+========================= */
+districtSelect.addEventListener("change", updateUpazila);
+upazilaSelect.addEventListener("change", updateAll);
+
 </script>
 
 </body>
