@@ -24,7 +24,6 @@ body{
  height:100%;
 }
 
-/* LEFT PANEL */
 .left{
  width:40%;
  background:#f7f9fc;
@@ -32,9 +31,7 @@ body{
  flex-direction:column;
 }
 
-.map{
- flex:1;
-}
+.map{ flex:1; }
 
 .controls{
  display:flex;
@@ -44,65 +41,50 @@ body{
 
 select{
  flex:1;
- padding:5px;
+ padding:6px;
 }
 
-/* RIGHT PANEL */
 .right{
  width:60%;
  display:flex;
  flex-direction:column;
 }
 
-/* TOP STATS */
-.stats{
- display:flex;
+.statsGrid{
+ display:grid;
+ grid-template-columns:repeat(2,1fr);
  gap:10px;
  padding:10px;
 }
 
 .box{
- flex:1;
- padding:15px;
+ padding:14px;
  border-radius:8px;
  font-weight:bold;
  cursor:pointer;
+ text-align:center;
 }
 
 .claimed{background:#d4f8d4;}
 .nonclaimed{background:#ffd6d6;}
+.yellow{background:#fff3cd;}
+.blue{background:#d8ebff;}
 
-/* TEMP */
-.temp{
- display:flex;
- gap:10px;
- padding:10px;
-}
-
-.tempBox{
- flex:1;
- background:#fff3cd;
- padding:10px;
- border-radius:8px;
- font-weight:bold;
-}
-
-/* CHART */
 .chartBox{
  flex:1;
- background:#ffffff;
- display:flex;
- justify-content:center;
- align-items:center;
+ background:#fff;
+ margin:10px;
+ border-radius:8px;
  padding:10px;
 }
 
 .errorText{
  color:red;
- font-size:20px;
+ font-size:22px;
  font-weight:bold;
+ text-align:center;
+ margin-top:100px;
 }
-
 </style>
 </head>
 
@@ -110,7 +92,6 @@ select{
 
 <div class="wrapper">
 
-<!-- LEFT -->
 <div class="left">
 
 <div class="controls">
@@ -122,17 +103,19 @@ select{
 
 </div>
 
-<!-- RIGHT -->
 <div class="right">
 
-<div class="stats">
-<div class="box claimed" id="claimedBox">Claimed: 0</div>
-<div class="box nonclaimed" id="nonClaimedBox">Non-Claimed: 0</div>
-</div>
+<div class="statsGrid">
 
-<div class="temp">
-<div class="tempBox" id="refTemp">Triggered Temp: -</div>
-<div class="tempBox" id="obsTemp">Observed Temp: -</div>
+<div class="box claimed" id="claimedBox">Claimed: 0</div>
+<div class="box nonclaimed" id="nonClaimedBox">Non Claimed: 0</div>
+
+<div class="box yellow" id="refTemp">Triggered Temp: -</div>
+<div class="box yellow" id="obsTemp">Observed Temp: -</div>
+
+<div class="box blue" id="selectedClaim">Selected Claim: -</div>
+<div class="box blue" id="selectedNonClaim">Selected Non Claim: -</div>
+
 </div>
 
 <div class="chartBox" id="chartBox">
@@ -140,7 +123,6 @@ select{
 </div>
 
 </div>
-
 </div>
 
 <script>
@@ -153,82 +135,88 @@ L.tileLayer('https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',{
 
 let geoLayer;
 let chart;
+let selectedLayer=null;
 
+let geoJSONData;
 let dataJSON={}, termJSON={};
 
-/* ================= LOAD ================= */
 Promise.all([
  fetch('upazilas.geojson').then(r=>r.json()),
  fetch('Data.json').then(r=>r.json()),
  fetch('Termsheet.json').then(r=>r.json())
 ]).then(([geo,data,term])=>{
 
+ geoJSONData=geo;
  dataJSON=data;
  termJSON=term;
 
  init();
- loadMap(geo);
+ loadMap();
+ autoSelectFirst();
 });
 
-/* ================= CLEAN ================= */
+/* ---------- CLEAN ---------- */
 function clean(v){
  return v ? v.toString().trim() : '';
 }
 
-/* ================= INIT ================= */
+/* ---------- INIT ---------- */
 function init(){
 
- district.innerHTML = Object.keys(dataJSON)
- .map(d=>`<option value="${d}">${d}</option>`)
- .join('');
+ let districts=Object.keys(dataJSON).sort();
+
+ district.innerHTML=districts.map(d=>
+ `<option value="${d}">${d}</option>`).join('');
+
+ district.onchange=()=>{
+   updateUpazila();
+   selectCurrent();
+ };
+
+ upazila.onchange=()=>{
+   selectCurrent();
+ };
 
  updateUpazila();
-
- district.onchange = ()=>{
-   updateUpazila();
-   refreshMap();
-   updateStats();
-   updateChart();
- };
-
- upazila.onchange = ()=>{
-   syncFromDropdown();
- };
 }
 
-/* ================= UPAZILA ================= */
+/* ---------- UPDATE UPAZILA ---------- */
 function updateUpazila(){
- let d = district.value;
 
- upazila.innerHTML =
- Object.keys(dataJSON[d] || {})
- .map(u=>`<option value="${u}">${u}</option>`)
- .join('');
+ let d=district.value;
+
+ let ups=Object.keys(dataJSON[d]||{}).sort();
+
+ upazila.innerHTML=ups.map(u=>
+ `<option value="${u}">${u}</option>`).join('');
 }
 
-/* ================= MAP ================= */
-function loadMap(geo){
+/* ---------- MAP ---------- */
+function loadMap(){
 
- geoLayer = L.geoJSON(geo,{
-   style: styleFeature,
-   onEachFeature:(f,l)=>{
+ geoLayer=L.geoJSON(geoJSONData,{
+   style:styleFeature,
+   onEachFeature:(feature,layer)=>{
 
-     l.on('click',()=>{
+     layer.on('click',()=>{
 
-       let d=f.properties.adm2_name;
-       let u=f.properties.adm3_name;
+       let d=feature.properties.adm2_name;
+       let u=feature.properties.adm3_name;
 
-       if(termJSON[d]?.[u]){
+       if(dataJSON[d] && dataJSON[d][u]){
 
          district.value=d;
          updateUpazila();
          upazila.value=u;
 
-         syncFromDropdown();
+         selectLayer(layer);
+         updateDashboard(d,u);
+         zoomLayer(layer);
 
-       } else {
+       }else{
          showError();
        }
+
      });
 
    }
@@ -237,85 +225,126 @@ function loadMap(geo){
  map.fitBounds(geoLayer.getBounds());
 }
 
-/* ================= STYLE ================= */
-function styleFeature(f){
+/* ---------- STYLE ---------- */
+function styleFeature(feature){
 
- let d=district.value;
- let u=f.properties.adm3_name;
+ let d=feature.properties.adm2_name;
+ let u=feature.properties.adm3_name;
 
  let fill='transparent';
 
- if(termJSON[d]?.[u]){
+ if(termJSON[d] && termJSON[d][u]){
    let s=termJSON[d][u]["Claim Status"];
-   if(s==="Claimed") fill="red";
-   else fill="green";
+   fill=(s==="Claimed") ? "red" : "green";
  }
 
  return {
-   color:"blue",
+   color:"#0044cc",
    weight:1,
    fillColor:fill,
-   fillOpacity:fill==="transparent"?0:0.6
+   fillOpacity:fill==="transparent" ? 0 : 0.6
  };
 }
 
-function refreshMap(){
- geoLayer.setStyle(styleFeature);
-}
-
-/* ================= SYNC ALL ================= */
-function syncFromDropdown(){
+/* ---------- AUTO FIRST ---------- */
+function autoSelectFirst(){
 
  let d=district.value;
  let u=upazila.value;
 
- let obj=termJSON?.[d]?.[u];
-
- updateStats(obj);
- updateChart(d,u,obj);
-
- refreshMap();
+ selectCurrent();
 }
 
-/* ================= STATS (FREEZE GLOBAL) ================= */
-function updateStats(obj){
+/* ---------- DROPDOWN TO MAP ---------- */
+function selectCurrent(){
 
  let d=district.value;
+ let u=upazila.value;
 
- let claimed=0, non=0;
- let clist=[], nlist=[];
+ geoLayer.eachLayer(layer=>{
 
- Object.entries(termJSON[d]||{}).forEach(([u,v])=>{
-   if(v["Claim Status"]==="Claimed"){
-     claimed++; clist.push(u);
-   } else {
-     non++; nlist.push(u);
+   let p=layer.feature.properties;
+
+   if(p.adm2_name===d && p.adm3_name===u){
+
+     selectLayer(layer);
+     updateDashboard(d,u);
+     zoomLayer(layer);
+
    }
+
  });
-
- claimedBox.innerText="Claimed: "+claimed;
- nonClaimedBox.innerText="Non-Claimed: "+non;
-
- claimedBox.onclick=()=>download(clist,"claimed_"+d+".txt");
- nonClaimedBox.onclick=()=>download(nlist,"nonclaimed_"+d+".txt");
-
- /* TEMP */
- if(obj){
-   refTemp.innerText="Triggered Temp: "+obj["Ref Min Temp"];
-   obsTemp.innerText="Observed Temp: "+obj["Observed Min Temp"];
- } else {
-   refTemp.innerText="Triggered Temp: -";
-   obsTemp.innerText="Observed Temp: -";
- }
 }
 
-/* ================= CHART ================= */
-function updateChart(d,u,obj){
+/* ---------- SELECT ONLY ONE ---------- */
+function selectLayer(layer){
+
+ if(selectedLayer){
+   geoLayer.resetStyle(selectedLayer);
+ }
+
+ selectedLayer=layer;
+
+ layer.setStyle({
+   weight:4,
+   color:"#000",
+   fillOpacity:0.9
+ });
+}
+
+/* ---------- ZOOM ---------- */
+function zoomLayer(layer){
+ map.fitBounds(layer.getBounds(),{
+   maxZoom:11
+ });
+}
+
+/* ---------- DASHBOARD ---------- */
+function updateDashboard(d,u){
+
+ let totalClaim=0,totalNon=0;
+
+ Object.values(termJSON[d]||{}).forEach(v=>{
+   if(v["Claim Status"]==="Claimed") totalClaim++;
+   else totalNon++;
+ });
+
+ claimedBox.innerText="Claimed: "+totalClaim;
+ nonClaimedBox.innerText="Non Claimed: "+totalNon;
+
+ let obj=termJSON[d]?.[u];
+
+ if(obj){
+
+   refTemp.innerText="Triggered Temp: "+obj["Ref Min Temp"];
+   obsTemp.innerText="Observed Temp: "+obj["Observed Min Temp"];
+
+   if(obj["Claim Status"]==="Claimed"){
+     selectedClaim.innerText="Selected Claim: YES";
+     selectedNonClaim.innerText="Selected Non Claim: NO";
+   }else{
+     selectedClaim.innerText="Selected Claim: NO";
+     selectedNonClaim.innerText="Selected Non Claim: YES";
+   }
+
+ }else{
+
+   refTemp.innerText="Triggered Temp: -";
+   obsTemp.innerText="Observed Temp: -";
+   selectedClaim.innerText="Selected Claim: -";
+   selectedNonClaim.innerText="Selected Non Claim: -";
+ }
+
+ drawChart(d,u);
+}
+
+/* ---------- CHART ---------- */
+function drawChart(d,u){
 
  let box=document.getElementById("chartBox");
 
- if(!obj){
-   box.innerHTML='<div class="errorText">This upazila is not under Cold wave insurance.</div>';
+ if(!dataJSON[d] || !dataJSON[d][u]){
+   showError();
    return;
  }
 
@@ -331,33 +360,37 @@ function updateChart(d,u,obj){
  chart=new Chart(document.getElementById("chart"),{
    type:"line",
    data:{
-     labels,
+     labels:labels,
      datasets:[{
        data:values,
        borderColor:"blue",
-       tension:0.3
+       borderWidth:2,
+       tension:0.3,
+       fill:false
      }]
    },
-   options:{plugins:{legend:{display:false}}}
+   options:{
+     responsive:true,
+     maintainAspectRatio:false,
+     plugins:{
+       legend:{display:false},
+       title:{
+         display:true,
+         text:u+" Temperature Trend"
+       }
+     }
+   }
  });
 }
 
-/* ================= DOWNLOAD ================= */
-function download(list,name){
- let blob=new Blob([list.join("\n")],{type:"text/plain"});
- let a=document.createElement("a");
- a.href=URL.createObjectURL(blob);
- a.download=name;
- a.click();
-}
-
-/* ================= ERROR ================= */
+/* ---------- ERROR ---------- */
 function showError(){
- document.getElementById("chartBox").innerHTML =
+
+ document.getElementById("chartBox").innerHTML=
  '<div class="errorText">This upazila is not under Cold wave insurance.</div>';
+
 }
 
 </script>
-
 </body>
 </html>
