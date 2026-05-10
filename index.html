@@ -76,7 +76,6 @@ select{
  margin:10px;
  border-radius:8px;
  padding:10px;
- position:relative;
 }
 
 .errorText{
@@ -161,7 +160,7 @@ function clean(v){
  return v ? v.toString().trim() : '';
 }
 
-/* ---------- GET MIN OBSERVED TEMP ---------- */
+/* ---------- GET MIN OBSERVED ---------- */
 function getObservedMin(d,u){
 
  if(!dataJSON[d] || !dataJSON[d][u]) return null;
@@ -170,12 +169,12 @@ function getObservedMin(d,u){
    .map(v=>Number(v))
    .filter(v=>!isNaN(v));
 
- if(vals.length===0) return null;
+ if(!vals.length) return null;
 
  return Math.min(...vals);
 }
 
-/* ---------- CLAIM LOGIC ---------- */
+/* ---------- TRIGGER STATUS ---------- */
 function isClaimed(d,u){
 
  if(!termJSON[d] || !termJSON[d][u]) return false;
@@ -228,8 +227,8 @@ function loadMap(){
 
      layer.on('click',()=>{
 
-       let d=clean(feature.properties.adm2_name);
-       let u=clean(feature.properties.adm3_name);
+       let d=feature.properties.adm2_name;
+       let u=feature.properties.adm3_name;
 
        if(dataJSON[d] && dataJSON[d][u]){
 
@@ -253,7 +252,7 @@ function loadMap(){
  map.fitBounds(geoLayer.getBounds());
 }
 
-/* ---------- STYLE UPDATED ---------- */
+/* ---------- STYLE ---------- */
 function styleFeature(feature){
 
  let d=clean(feature.properties.adm2_name);
@@ -261,13 +260,9 @@ function styleFeature(feature){
 
  let fill='transparent';
 
- if(termJSON[d] && termJSON[d][u] && dataJSON[d] && dataJSON[d][u]){
+ if(dataJSON[d] && dataJSON[d][u] && termJSON[d] && termJSON[d][u]){
 
-   if(isClaimed(d,u)){
-     fill='red';
-   }else{
-     fill='green';
-   }
+   fill = isClaimed(d,u) ? "red" : "green";
  }
 
  return {
@@ -293,7 +288,7 @@ function selectCurrent(){
 
    let p=layer.feature.properties;
 
-   if(clean(p.adm2_name)===d && clean(p.adm3_name)===u){
+   if(p.adm2_name===d && p.adm3_name===u){
 
      selectLayer(layer);
      updateDashboard(d,u);
@@ -327,47 +322,43 @@ function zoomLayer(layer){
  });
 }
 
-/* ---------- DASHBOARD ---------- */
-function updateDashboard(d,u){
+/* ---------- TOTAL COUNT ---------- */
+function getDistrictTotals(d){
 
  let totalClaim=0,totalNon=0;
 
- Object.keys(termJSON[d]||{}).forEach(name=>{
+ Object.keys(dataJSON[d]||{}).forEach(u=>{
 
-   if(isClaimed(d,name)){
-     totalClaim++;
-   }else{
-     totalNon++;
-   }
+   if(isClaimed(d,u)) totalClaim++;
+   else totalNon++;
 
  });
 
- claimedBox.innerText="Claimed: "+totalClaim;
- nonClaimedBox.innerText="Non Claimed: "+totalNon;
+ return {totalClaim,totalNon};
+}
 
- let obj=termJSON[d]?.[u];
+/* ---------- DASHBOARD ---------- */
+function updateDashboard(d,u){
 
- if(obj){
+ let totals = getDistrictTotals(d);
 
-   let observed = getObservedMin(d,u);
+ claimedBox.innerText="Claimed: "+totals.totalClaim;
+ nonClaimedBox.innerText="Non Claimed: "+totals.totalNon;
 
-   refTemp.innerText="Triggered Temp: "+obj["Ref Min Temp"];
-   obsTemp.innerText="Observed Temp: "+(observed!==null ? observed : "-");
+ let trigger = termJSON[d]?.[u]?.["Ref Min Temp"] ?? "-";
+ let observed = getObservedMin(d,u);
 
-   if(isClaimed(d,u)){
-     selectedClaim.innerText="Selected Claim: YES";
-     selectedNonClaim.innerText="Selected Non Claim: NO";
-   }else{
-     selectedClaim.innerText="Selected Claim: NO";
-     selectedNonClaim.innerText="Selected Non Claim: YES";
-   }
+ refTemp.innerText="Triggered Temp: "+trigger;
+ obsTemp.innerText="Observed Temp: "+(
+   observed===null ? "-" : observed.toFixed(2)
+ );
 
+ if(isClaimed(d,u)){
+   selectedClaim.innerText="Selected Claim: YES";
+   selectedNonClaim.innerText="Selected Non Claim: NO";
  }else{
-
-   refTemp.innerText="Triggered Temp: -";
-   obsTemp.innerText="Observed Temp: -";
-   selectedClaim.innerText="Selected Claim: -";
-   selectedNonClaim.innerText="Selected Non Claim: -";
+   selectedClaim.innerText="Selected Claim: NO";
+   selectedNonClaim.innerText="Selected Non Claim: YES";
  }
 
  drawChart(d,u);
@@ -385,10 +376,16 @@ function drawChart(d,u){
 
  box.innerHTML='<canvas id="chart"></canvas>';
 
+ let trigger = Number(termJSON[d]?.[u]?.["Ref Min Temp"]);
+
  let series=dataJSON[d][u];
 
  let labels=Object.keys(series);
  let values=labels.map(k=>Number(series[k]));
+
+ let redDots = values.map(v =>
+   (!isNaN(v) && v <= trigger) ? "red" : "blue"
+ );
 
  if(chart) chart.destroy();
 
@@ -401,7 +398,10 @@ function drawChart(d,u){
        borderColor:"blue",
        borderWidth:2,
        tension:0.3,
-       fill:false
+       fill:false,
+       pointRadius:5,
+       pointBackgroundColor:redDots,
+       pointBorderColor:redDots
      }]
    },
    options:{
