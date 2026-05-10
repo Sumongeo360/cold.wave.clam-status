@@ -6,204 +6,204 @@ L.tileLayer('https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',{
 
 let geoLayer;
 let chart;
-let selectedLayer = null;
+let selectedLayer=null;
 
-let dataJSON = {}, termJSON = {};
 let geoJSONData;
+let dataJSON={}, termJSON={};
 
-/* ---------- LOAD ---------- */
 Promise.all([
  fetch('upazilas.geojson').then(r=>r.json()),
  fetch('Data.json').then(r=>r.json()),
  fetch('Termsheet.json').then(r=>r.json())
 ]).then(([geo,data,term])=>{
 
- geoJSONData = geo;
- dataJSON = data;
- termJSON = term;
+ geoJSONData=geo;
+ dataJSON=data;
+ termJSON=term;
 
  init();
  loadMap();
  autoSelectFirst();
 });
 
+/* ---------- CLEAN ---------- */
+function clean(v){
+ return v ? v.toString().trim() : '';
+}
+
 /* ---------- INIT ---------- */
 function init(){
 
- district.innerHTML =
- Object.keys(dataJSON).sort()
- .map(d=>`<option value="${d}">${d}</option>`)
- .join('');
+ let districts=Object.keys(dataJSON).sort();
 
- updateUpazila();
+ district.innerHTML=districts.map(d=>
+ `<option value="${d}">${d}</option>`).join('');
 
- district.onchange = () => {
+ district.onchange=()=>{
    updateUpazila();
    selectCurrent();
  };
 
- upazila.onchange = () => {
+ upazila.onchange=()=>{
    selectCurrent();
  };
+
+ updateUpazila();
 }
 
-/* ---------- UPAZILA ---------- */
+/* ---------- UPDATE UPAZILA ---------- */
 function updateUpazila(){
 
- let d = district.value;
+ let d=district.value;
 
- upazila.innerHTML =
- Object.keys(dataJSON[d] || {}).sort()
- .map(u=>`<option value="${u}">${u}</option>`)
- .join('');
+ let ups=Object.keys(dataJSON[d]||{}).sort();
+
+ upazila.innerHTML=ups.map(u=>
+ `<option value="${u}">${u}</option>`).join('');
 }
 
-/* ---------- MAP LOAD ---------- */
+/* ---------- MAP ---------- */
 function loadMap(){
 
- geoLayer = L.geoJSON(geoJSONData,{
-
-   style: styleFeature,
-
+ geoLayer=L.geoJSON(geoJSONData,{
+   style:styleFeature,
    onEachFeature:(feature,layer)=>{
 
      layer.on('click',()=>{
 
-       let d = feature.properties.adm2_name;
-       let u = feature.properties.adm3_name;
+       let d=feature.properties.adm2_name;
+       let u=feature.properties.adm3_name;
 
-       if(termJSON[d]?.[u]){
+       if(dataJSON[d] && dataJSON[d][u]){
 
-         district.value = d;
+         district.value=d;
          updateUpazila();
-         upazila.value = u;
+         upazila.value=u;
 
-         selectFeature(layer);
+         selectLayer(layer);
          updateDashboard(d,u);
-         map.fitBounds(layer.getBounds(),{maxZoom:11});
+         zoomLayer(layer);
 
-       } else {
+       }else{
          showError();
        }
 
      });
 
    }
-
  }).addTo(map);
 
  map.fitBounds(geoLayer.getBounds());
 }
 
 /* ---------- STYLE ---------- */
-function styleFeature(f){
+function styleFeature(feature){
 
- let d = district.value;
- let u = f.properties.adm3_name;
+ let d=feature.properties.adm2_name;
+ let u=feature.properties.adm3_name;
 
- let fill = 'transparent';
+ let fill='transparent';
 
- if(termJSON[d]?.[u]){
-   fill = termJSON[d][u]["Claim Status"] === "Claimed"
-   ? "red"
-   : "green";
+ if(termJSON[d] && termJSON[d][u]){
+   let s=termJSON[d][u]["Claim Status"];
+   fill=(s==="Claimed") ? "red" : "green";
  }
 
  return {
    color:"#0044cc",
    weight:1,
    fillColor:fill,
-   fillOpacity: fill==="transparent" ? 0 : 0.6
+   fillOpacity:fill==="transparent" ? 0 : 0.6
  };
 }
 
-/* ---------- FIRST AUTO SELECT ---------- */
+/* ---------- AUTO FIRST ---------- */
 function autoSelectFirst(){
 
- let d = district.value;
- let u = upazila.options[0]?.value;
-
- if(u){
-   upazila.value = u;
-   selectCurrent();
- }
+ selectCurrent();
 }
 
-/* ---------- SYNC FROM DROPDOWN ---------- */
+/* ---------- DROPDOWN TO MAP ---------- */
 function selectCurrent(){
 
- let d = district.value;
- let u = upazila.value;
+ let d=district.value;
+ let u=upazila.value;
 
  geoLayer.eachLayer(layer=>{
 
-   let p = layer.feature.properties;
+   let p=layer.feature.properties;
 
-   if(p.adm2_name === d && p.adm3_name === u){
-     selectFeature(layer);
+   if(p.adm2_name===d && p.adm3_name===u){
+
+     selectLayer(layer);
      updateDashboard(d,u);
-     map.fitBounds(layer.getBounds(),{maxZoom:11});
+     zoomLayer(layer);
+
    }
 
  });
-
 }
 
-/* ---------- SINGLE SELECTION ONLY ---------- */
-function selectFeature(layer){
+/* ---------- SELECT ONLY ONE ---------- */
+function selectLayer(layer){
 
  if(selectedLayer){
    geoLayer.resetStyle(selectedLayer);
  }
 
- selectedLayer = layer;
+ selectedLayer=layer;
 
  layer.setStyle({
-   weight:3,
+   weight:4,
    color:"#000",
-   fillOpacity:0.85
+   fillOpacity:0.9
+ });
+}
+
+/* ---------- ZOOM ---------- */
+function zoomLayer(layer){
+ map.fitBounds(layer.getBounds(),{
+   maxZoom:11
  });
 }
 
 /* ---------- DASHBOARD ---------- */
 function updateDashboard(d,u){
 
- let totalClaim = 0;
- let totalNon = 0;
+ let totalClaim=0,totalNon=0;
 
- Object.values(termJSON[d] || {}).forEach(v=>{
-   if(v["Claim Status"] === "Claimed") totalClaim++;
+ Object.values(termJSON[d]||{}).forEach(v=>{
+   if(v["Claim Status"]==="Claimed") totalClaim++;
    else totalNon++;
  });
 
- claimedBox.innerText = "Claimed: " + totalClaim;
- nonClaimedBox.innerText = "Non Claimed: " + totalNon;
+ claimedBox.innerText="Claimed: "+totalClaim;
+ nonClaimedBox.innerText="Non Claimed: "+totalNon;
 
- let obj = termJSON[d]?.[u];
+ let obj=termJSON[d]?.[u];
 
  if(obj){
 
-   let ref = obj["Ref Min Temp"];
+   refTemp.innerText="Triggered Temp: "+obj["Ref Min Temp"];
+
+   /* ✅ FIXED ONLY THIS LINE */
    let obs = obj["Observed Min Temp"] ?? obj["Obsrved Min Temp"];
+   obsTemp.innerText = "Observed Temp: " + (obs ?? "-");
 
-   refTemp.innerText =
-   "Triggered Temp: " + (ref !== undefined ? Number(ref).toFixed(2) + "°C" : "-");
+   if(obj["Claim Status"]==="Claimed"){
+     selectedClaim.innerText="Selected Claim: YES";
+     selectedNonClaim.innerText="Selected Non Claim: NO";
+   }else{
+     selectedClaim.innerText="Selected Claim: NO";
+     selectedNonClaim.innerText="Selected Non Claim: YES";
+   }
 
-   obsTemp.innerText =
-   "Observed Temp: " + (obs !== undefined ? Number(obs).toFixed(2) + "°C" : "-");
+ }else{
 
-   selectedClaim.innerText =
-   "Selected Claim: " + (obj["Claim Status"] === "Claimed" ? "YES" : "NO");
-
-   selectedNonClaim.innerText =
-   "Selected Non Claim: " + (obj["Claim Status"] !== "Claimed" ? "YES" : "NO");
-
- } else {
-
-   refTemp.innerText = "Triggered Temp: -";
-   obsTemp.innerText = "Observed Temp: -";
-   selectedClaim.innerText = "Selected Claim: -";
-   selectedNonClaim.innerText = "Selected Non Claim: -";
+   refTemp.innerText="Triggered Temp: -";
+   obsTemp.innerText="Observed Temp: -";
+   selectedClaim.innerText="Selected Claim: -";
+   selectedNonClaim.innerText="Selected Non Claim: -";
  }
 
  drawChart(d,u);
@@ -212,38 +212,43 @@ function updateDashboard(d,u){
 /* ---------- CHART ---------- */
 function drawChart(d,u){
 
- let box = document.getElementById("chartBox");
+ let box=document.getElementById("chartBox");
 
- if(!dataJSON[d]?.[u]){
-   box.innerHTML = '<div class="errorText">Not under Cold wave insurance</div>';
+ if(!dataJSON[d] || !dataJSON[d][u]){
+   showError();
    return;
  }
 
- box.innerHTML = '<canvas id="chart"></canvas>';
+ box.innerHTML='<canvas id="chart"></canvas>';
 
- let series = dataJSON[d][u];
+ let series=dataJSON[d][u];
 
- let labels = Object.keys(series);
- let values = labels.map(k => Number(series[k]));
+ let labels=Object.keys(series);
+ let values=labels.map(k=>Number(series[k]));
 
  if(chart) chart.destroy();
 
- chart = new Chart(document.getElementById("chart"),{
+ chart=new Chart(document.getElementById("chart"),{
    type:"line",
    data:{
-     labels,
+     labels:labels,
      datasets:[{
        data:values,
        borderColor:"blue",
+       borderWidth:2,
        tension:0.3,
-       borderWidth:2
+       fill:false
      }]
    },
    options:{
      responsive:true,
      maintainAspectRatio:false,
      plugins:{
-       legend:{display:false}
+       legend:{display:false},
+       title:{
+         display:true,
+         text:u+" Temperature Trend"
+       }
      }
    }
  });
@@ -251,6 +256,8 @@ function drawChart(d,u){
 
 /* ---------- ERROR ---------- */
 function showError(){
- document.getElementById("chartBox").innerHTML =
+
+ document.getElementById("chartBox").innerHTML=
  '<div class="errorText">This upazila is not under Cold wave insurance.</div>';
+
 }
