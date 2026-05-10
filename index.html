@@ -76,6 +76,7 @@ select{
  margin:10px;
  border-radius:8px;
  padding:10px;
+ position:relative;
 }
 
 .errorText{
@@ -160,6 +161,33 @@ function clean(v){
  return v ? v.toString().trim() : '';
 }
 
+/* ---------- GET MIN OBSERVED TEMP ---------- */
+function getObservedMin(d,u){
+
+ if(!dataJSON[d] || !dataJSON[d][u]) return null;
+
+ let vals = Object.values(dataJSON[d][u])
+   .map(v=>Number(v))
+   .filter(v=>!isNaN(v));
+
+ if(vals.length===0) return null;
+
+ return Math.min(...vals);
+}
+
+/* ---------- CLAIM LOGIC ---------- */
+function isClaimed(d,u){
+
+ if(!termJSON[d] || !termJSON[d][u]) return false;
+
+ let trigger = Number(termJSON[d][u]["Ref Min Temp"]);
+ let observed = getObservedMin(d,u);
+
+ if(observed===null || isNaN(trigger)) return false;
+
+ return observed <= trigger;
+}
+
 /* ---------- INIT ---------- */
 function init(){
 
@@ -200,8 +228,8 @@ function loadMap(){
 
      layer.on('click',()=>{
 
-       let d=feature.properties.adm2_name;
-       let u=feature.properties.adm3_name;
+       let d=clean(feature.properties.adm2_name);
+       let u=clean(feature.properties.adm3_name);
 
        if(dataJSON[d] && dataJSON[d][u]){
 
@@ -225,17 +253,21 @@ function loadMap(){
  map.fitBounds(geoLayer.getBounds());
 }
 
-/* ---------- STYLE ---------- */
+/* ---------- STYLE UPDATED ---------- */
 function styleFeature(feature){
 
- let d=feature.properties.adm2_name;
- let u=feature.properties.adm3_name;
+ let d=clean(feature.properties.adm2_name);
+ let u=clean(feature.properties.adm3_name);
 
  let fill='transparent';
 
- if(termJSON[d] && termJSON[d][u]){
-   let s=termJSON[d][u]["Claim Status"];
-   fill=(s==="Claimed") ? "red" : "green";
+ if(termJSON[d] && termJSON[d][u] && dataJSON[d] && dataJSON[d][u]){
+
+   if(isClaimed(d,u)){
+     fill='red';
+   }else{
+     fill='green';
+   }
  }
 
  return {
@@ -248,10 +280,6 @@ function styleFeature(feature){
 
 /* ---------- AUTO FIRST ---------- */
 function autoSelectFirst(){
-
- let d=district.value;
- let u=upazila.value;
-
  selectCurrent();
 }
 
@@ -265,7 +293,7 @@ function selectCurrent(){
 
    let p=layer.feature.properties;
 
-   if(p.adm2_name===d && p.adm3_name===u){
+   if(clean(p.adm2_name)===d && clean(p.adm3_name)===u){
 
      selectLayer(layer);
      updateDashboard(d,u);
@@ -304,9 +332,14 @@ function updateDashboard(d,u){
 
  let totalClaim=0,totalNon=0;
 
- Object.values(termJSON[d]||{}).forEach(v=>{
-   if(v["Claim Status"]==="Claimed") totalClaim++;
-   else totalNon++;
+ Object.keys(termJSON[d]||{}).forEach(name=>{
+
+   if(isClaimed(d,name)){
+     totalClaim++;
+   }else{
+     totalNon++;
+   }
+
  });
 
  claimedBox.innerText="Claimed: "+totalClaim;
@@ -316,10 +349,12 @@ function updateDashboard(d,u){
 
  if(obj){
 
-   refTemp.innerText="Triggered Temp: "+obj["Ref Min Temp"];
-   obsTemp.innerText="Observed Temp: "+obj["Observed Min Temp"];
+   let observed = getObservedMin(d,u);
 
-   if(obj["Claim Status"]==="Claimed"){
+   refTemp.innerText="Triggered Temp: "+obj["Ref Min Temp"];
+   obsTemp.innerText="Observed Temp: "+(observed!==null ? observed : "-");
+
+   if(isClaimed(d,u)){
      selectedClaim.innerText="Selected Claim: YES";
      selectedNonClaim.innerText="Selected Non Claim: NO";
    }else{
