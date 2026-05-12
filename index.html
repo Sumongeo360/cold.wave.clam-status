@@ -9,60 +9,83 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
+html,body{
+margin:0;
+padding:0;
+overflow:hidden;
+font-family:Arial;
+background:#dfe8f4;
+}
+
+/* FIXED PC SIZE EVEN MOBILE */
 body{
- margin:0;
- height:100vh;
- width:100vw;
- display:flex;
- background:#e9eef5;
- font-family:Arial;
+display:flex;
+justify-content:center;
+align-items:center;
+height:100vh;
 }
 
 .wrapper{
- display:flex;
- width:100%;
- height:100%;
+width:1366px;
+height:768px;
+display:flex;
+background:#fff;
+box-shadow:0 0 25px rgba(0,0,0,.25);
 }
 
+/* LEFT */
 .left{
- width:40%;
- background:#f7f9fc;
- display:flex;
- flex-direction:column;
+width:40%;
+display:flex;
+flex-direction:column;
+background:#f7f9fc;
 }
-
-.map{ flex:1; }
 
 .controls{
- display:flex;
- gap:5px;
- padding:5px;
+display:flex;
+gap:5px;
+padding:6px;
+}
+
+select,button{
+padding:7px;
+font-size:14px;
 }
 
 select{
- flex:1;
- padding:6px;
+flex:1;
 }
 
+#toggleMap{
+width:120px;
+cursor:pointer;
+font-weight:bold;
+}
+
+.map{
+flex:1;
+}
+
+/* RIGHT */
 .right{
- width:60%;
- display:flex;
- flex-direction:column;
+width:60%;
+display:flex;
+flex-direction:column;
 }
 
 .statsGrid{
- display:grid;
- grid-template-columns:repeat(2,1fr);
- gap:10px;
- padding:10px;
+display:grid;
+grid-template-columns:repeat(2,1fr);
+gap:10px;
+padding:10px;
 }
 
 .box{
- padding:14px;
- border-radius:8px;
- font-weight:bold;
- cursor:pointer;
- text-align:center;
+padding:14px;
+border-radius:8px;
+font-weight:bold;
+text-align:center;
+font-size:18px;
 }
 
 .claimed{background:#d4f8d4;}
@@ -71,19 +94,19 @@ select{
 .blue{background:#d8ebff;}
 
 .chartBox{
- flex:1;
- background:#fff;
- margin:10px;
- border-radius:8px;
- padding:10px;
+flex:1;
+margin:10px;
+background:#fff;
+border-radius:8px;
+padding:10px;
 }
 
 .errorText{
- color:red;
- font-size:22px;
- font-weight:bold;
- text-align:center;
- margin-top:100px;
+color:red;
+font-size:22px;
+font-weight:bold;
+text-align:center;
+margin-top:100px;
 }
 </style>
 </head>
@@ -97,6 +120,7 @@ select{
 <div class="controls">
 <select id="district"></select>
 <select id="upazila"></select>
+<button id="toggleMap">Satellite</button>
 </div>
 
 <div id="map" class="map"></div>
@@ -107,9 +131,11 @@ select{
 
 <div class="statsGrid">
 
+<!-- FIXED TOTAL -->
 <div class="box claimed" id="claimedBox">Claimed: 0</div>
 <div class="box nonclaimed" id="nonClaimedBox">Non Claimed: 0</div>
 
+<!-- CHANGES WITH SELECTION -->
 <div class="box yellow" id="refTemp">Triggered Temp: -</div>
 <div class="box yellow" id="obsTemp">Observed Temp: -</div>
 
@@ -129,9 +155,34 @@ select{
 
 let map = L.map('map').setView([23.5,90.3],7);
 
-L.tileLayer('https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',{
- subdomains:['mt0','mt1','mt2','mt3']
-}).addTo(map);
+/* MAPS */
+let roadLayer = L.tileLayer(
+'https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
+{maxZoom:20,subdomains:['mt0','mt1','mt2','mt3']}
+).addTo(map);
+
+let satelliteLayer = L.tileLayer(
+'https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
+{maxZoom:20,subdomains:['mt0','mt1','mt2','mt3']}
+);
+
+let currentMap = "road";
+
+document.getElementById("toggleMap").onclick=function(){
+
+if(currentMap==="road"){
+map.removeLayer(roadLayer);
+satelliteLayer.addTo(map);
+currentMap="satellite";
+this.innerText="Road Map";
+}else{
+map.removeLayer(satelliteLayer);
+roadLayer.addTo(map);
+currentMap="road";
+this.innerText="Satellite";
+}
+
+};
 
 let geoLayer;
 let chart;
@@ -141,291 +192,300 @@ let geoJSONData;
 let dataJSON={}, termJSON={};
 
 Promise.all([
- fetch('upazilas.geojson').then(r=>r.json()),
- fetch('Data.json').then(r=>r.json()),
- fetch('Termsheet.json').then(r=>r.json())
+fetch('upazilas.geojson').then(r=>r.json()),
+fetch('Data.json').then(r=>r.json()),
+fetch('Termsheet.json').then(r=>r.json())
 ]).then(([geo,data,term])=>{
 
- geoJSONData=geo;
- dataJSON=data;
- termJSON=term;
+geoJSONData=geo;
+dataJSON=data;
+termJSON=term;
 
- init();
- loadMap();
- autoSelectFirst();
+init();
+loadMap();
+updateFixedTotals();
+autoSelectFirst();
+
 });
 
-/* ---------- CLEAN ---------- */
+/* CLEAN */
 function clean(v){
- return v ? v.toString().trim() : '';
+return v ? v.toString().trim() : '';
 }
 
-/* ---------- GET MIN OBSERVED ---------- */
+/* MIN TEMP */
 function getObservedMin(d,u){
 
- if(!dataJSON[d] || !dataJSON[d][u]) return null;
+if(!dataJSON[d] || !dataJSON[d][u]) return null;
 
- let vals = Object.values(dataJSON[d][u])
-   .map(v=>Number(v))
-   .filter(v=>!isNaN(v));
+let vals = Object.values(dataJSON[d][u])
+.map(v=>Number(v))
+.filter(v=>!isNaN(v));
 
- if(!vals.length) return null;
+if(!vals.length) return null;
 
- return Math.min(...vals);
+return Math.min(...vals);
 }
 
-/* ---------- TRIGGER STATUS ---------- */
+/* CLAIM STATUS */
 function isClaimed(d,u){
 
- if(!termJSON[d] || !termJSON[d][u]) return false;
+if(!termJSON[d] || !termJSON[d][u]) return false;
 
- let trigger = Number(termJSON[d][u]["Ref Min Temp"]);
- let observed = getObservedMin(d,u);
+let trigger = Number(termJSON[d][u]["Ref Min Temp"]);
+let observed = getObservedMin(d,u);
 
- if(observed===null || isNaN(trigger)) return false;
+if(observed===null || isNaN(trigger)) return false;
 
- return observed <= trigger;
+return observed <= trigger;
 }
 
-/* ---------- INIT ---------- */
+/* FIXED TOTAL WHOLE BANGLADESH */
+function updateFixedTotals(){
+
+let totalClaim=0;
+let totalNon=0;
+
+Object.keys(dataJSON).forEach(d=>{
+
+Object.keys(dataJSON[d]).forEach(u=>{
+
+if(termJSON[d] && termJSON[d][u]){
+
+if(isClaimed(d,u')) totalClaim++;
+else totalNon++;
+
+}
+
+});
+
+});
+
+claimedBox.innerText="Claimed: "+totalClaim;
+nonClaimedBox.innerText="Non Claimed: "+totalNon;
+}
+
+/* INIT */
 function init(){
 
- let districts=Object.keys(dataJSON).sort();
+let districts=Object.keys(dataJSON).sort();
 
- district.innerHTML=districts.map(d=>
- `<option value="${d}">${d}</option>`).join('');
+district.innerHTML=districts.map(d=>
+`<option value="${d}">${d}</option>`).join('');
 
- district.onchange=()=>{
-   updateUpazila();
-   selectCurrent();
- };
+district.onchange=()=>{
+updateUpazila();
+selectCurrent();
+};
 
- upazila.onchange=()=>{
-   selectCurrent();
- };
+upazila.onchange=()=>{
+selectCurrent();
+};
 
- updateUpazila();
+updateUpazila();
+
 }
 
-/* ---------- UPDATE UPAZILA ---------- */
+/* UPAZILA */
 function updateUpazila(){
 
- let d=district.value;
+let d=district.value;
 
- let ups=Object.keys(dataJSON[d]||{}).sort();
+let ups=Object.keys(dataJSON[d]||{}).sort();
 
- upazila.innerHTML=ups.map(u=>
- `<option value="${u}">${u}</option>`).join('');
+upazila.innerHTML=ups.map(u=>
+`<option value="${u}">${u}</option>`).join('');
+
 }
 
-/* ---------- MAP ---------- */
+/* MAP */
 function loadMap(){
 
- geoLayer=L.geoJSON(geoJSONData,{
-   style:styleFeature,
-   onEachFeature:(feature,layer)=>{
+geoLayer=L.geoJSON(geoJSONData,{
+style:styleFeature,
+onEachFeature:(feature,layer)=>{
 
-     layer.on('click',()=>{
+layer.on('click',()=>{
 
-       let d=feature.properties.adm2_name;
-       let u=feature.properties.adm3_name;
+let d=feature.properties.adm2_name;
+let u=feature.properties.adm3_name;
 
-       if(dataJSON[d] && dataJSON[d][u]){
+if(dataJSON[d] && dataJSON[d][u]){
 
-         district.value=d;
-         updateUpazila();
-         upazila.value=u;
+district.value=d;
+updateUpazila();
+upazila.value=u;
 
-         selectLayer(layer);
-         updateDashboard(d,u);
-         zoomLayer(layer);
+selectLayer(layer);
+updateDashboard(d,u);
+zoomLayer(layer);
 
-       }else{
-         showError();
-       }
-
-     });
-
-   }
- }).addTo(map);
-
- map.fitBounds(geoLayer.getBounds());
+}else{
+showError();
 }
 
-/* ---------- STYLE ---------- */
+});
+
+}
+}).addTo(map);
+
+map.fitBounds(geoLayer.getBounds());
+
+}
+
+/* STYLE */
 function styleFeature(feature){
 
- let d=clean(feature.properties.adm2_name);
- let u=clean(feature.properties.adm3_name);
+let d=clean(feature.properties.adm2_name);
+let u=clean(feature.properties.adm3_name);
 
- let fill='transparent';
+let fill='transparent';
 
- if(dataJSON[d] && dataJSON[d][u] && termJSON[d] && termJSON[d][u]){
+if(dataJSON[d] && dataJSON[d][u] && termJSON[d] && termJSON[d][u]){
 
-   fill = isClaimed(d,u) ? "red" : "green";
- }
+fill = isClaimed(d,u) ? "red" : "green";
 
- return {
-   color:"#0044cc",
-   weight:1,
-   fillColor:fill,
-   fillOpacity:fill==="transparent" ? 0 : 0.6
- };
 }
 
-/* ---------- AUTO FIRST ---------- */
+return{
+color:"#0044cc",
+weight:1,
+fillColor:fill,
+fillOpacity:fill==="transparent"?0:0.6
+};
+
+}
+
+/* FIRST */
 function autoSelectFirst(){
- selectCurrent();
+selectCurrent();
 }
 
-/* ---------- DROPDOWN TO MAP ---------- */
+/* SELECT */
 function selectCurrent(){
 
- let d=district.value;
- let u=upazila.value;
+let d=district.value;
+let u=upazila.value;
 
- geoLayer.eachLayer(layer=>{
+geoLayer.eachLayer(layer=>{
 
-   let p=layer.feature.properties;
+let p=layer.feature.properties;
 
-   if(p.adm2_name===d && p.adm3_name===u){
+if(p.adm2_name===d && p.adm3_name===u){
 
-     selectLayer(layer);
-     updateDashboard(d,u);
-     zoomLayer(layer);
+selectLayer(layer);
+updateDashboard(d,u);
+zoomLayer(layer);
 
-   }
-
- });
 }
 
-/* ---------- SELECT ONLY ONE ---------- */
+});
+
+}
+
+/* HIGHLIGHT */
 function selectLayer(layer){
 
- if(selectedLayer){
-   geoLayer.resetStyle(selectedLayer);
- }
-
- selectedLayer=layer;
-
- layer.setStyle({
-   weight:4,
-   color:"#000",
-   fillOpacity:0.9
- });
+if(selectedLayer){
+geoLayer.resetStyle(selectedLayer);
 }
 
-/* ---------- ZOOM ---------- */
+selectedLayer=layer;
+
+layer.setStyle({
+weight:4,
+color:"#000",
+fillOpacity:0.9
+});
+
+}
+
+/* ZOOM */
 function zoomLayer(layer){
- map.fitBounds(layer.getBounds(),{
-   maxZoom:11
- });
+map.fitBounds(layer.getBounds(),{maxZoom:11});
 }
 
-/* ---------- TOTAL COUNT ---------- */
-function getDistrictTotals(d){
-
- let totalClaim=0,totalNon=0;
-
- Object.keys(dataJSON[d]||{}).forEach(u=>{
-
-   if(isClaimed(d,u)) totalClaim++;
-   else totalNon++;
-
- });
-
- return {totalClaim,totalNon};
-}
-
-/* ---------- DASHBOARD ---------- */
+/* DASHBOARD */
 function updateDashboard(d,u){
 
- let totals = getDistrictTotals(d);
+let trigger = termJSON[d]?.[u]?.["Ref Min Temp"] ?? "-";
+let observed = getObservedMin(d,u);
 
- claimedBox.innerText="Claimed: "+totals.totalClaim;
- nonClaimedBox.innerText="Non Claimed: "+totals.totalNon;
+refTemp.innerText="Triggered Temp: "+trigger;
 
- let trigger = termJSON[d]?.[u]?.["Ref Min Temp"] ?? "-";
- let observed = getObservedMin(d,u);
+obsTemp.innerText="Observed Temp: "+
+(observed===null ? "-" : observed.toFixed(2));
 
- refTemp.innerText="Triggered Temp: "+trigger;
- obsTemp.innerText="Observed Temp: "+(
-   observed===null ? "-" : observed.toFixed(2)
- );
-
- if(isClaimed(d,u)){
-   selectedClaim.innerText="Selected Claim: YES";
-   selectedNonClaim.innerText="Selected Non Claim: NO";
- }else{
-   selectedClaim.innerText="Selected Claim: NO";
-   selectedNonClaim.innerText="Selected Non Claim: YES";
- }
-
- drawChart(d,u);
+if(isClaimed(d,u)){
+selectedClaim.innerText="Selected Claim: YES";
+selectedNonClaim.innerText="Selected Non Claim: NO";
+}else{
+selectedClaim.innerText="Selected Claim: NO";
+selectedNonClaim.innerText="Selected Non Claim: YES";
 }
 
-/* ---------- CHART ---------- */
+drawChart(d,u);
+
+}
+
+/* CHART */
 function drawChart(d,u){
 
- let box=document.getElementById("chartBox");
+let box=document.getElementById("chartBox");
 
- if(!dataJSON[d] || !dataJSON[d][u]){
-   showError();
-   return;
- }
+box.innerHTML='<canvas id="chart"></canvas>';
 
- box.innerHTML='<canvas id="chart"></canvas>';
+let trigger = Number(termJSON[d]?.[u]?.["Ref Min Temp"]);
+let series=dataJSON[d][u];
 
- let trigger = Number(termJSON[d]?.[u]?.["Ref Min Temp"]);
+let labels=Object.keys(series);
+let values=labels.map(k=>Number(series[k]));
 
- let series=dataJSON[d][u];
+let redDots = values.map(v =>
+(!isNaN(v) && v<=trigger) ? "red":"blue"
+);
 
- let labels=Object.keys(series);
- let values=labels.map(k=>Number(series[k]));
+if(chart) chart.destroy();
 
- let redDots = values.map(v =>
-   (!isNaN(v) && v <= trigger) ? "red" : "blue"
- );
+chart=new Chart(document.getElementById("chart"),{
+type:"line",
+data:{
+labels:labels,
+datasets:[{
+data:values,
+borderColor:"blue",
+borderWidth:2,
+tension:.3,
+fill:false,
+pointRadius:2.5,
+pointBackgroundColor:redDots,
+pointBorderColor:redDots
+}]
+},
+options:{
+responsive:true,
+maintainAspectRatio:false,
+plugins:{
+legend:{display:false},
+title:{
+display:true,
+text:u+" Temperature Trend"
+}
+}
+}
+});
 
- if(chart) chart.destroy();
-
- chart=new Chart(document.getElementById("chart"),{
-   type:"line",
-   data:{
-     labels:labels,
-     datasets:[{
-       data:values,
-       borderColor:"blue",
-       borderWidth:2,
-       tension:0.3,
-       fill:false,
-       pointRadius:2.5,
-       pointBackgroundColor:redDots,
-       pointBorderColor:redDots
-     }]
-   },
-   options:{
-     responsive:true,
-     maintainAspectRatio:false,
-     plugins:{
-       legend:{display:false},
-       title:{
-         display:true,
-         text:u+" Temperature Trend"
-       }
-     }
-   }
- });
 }
 
-/* ---------- ERROR ---------- */
+/* ERROR */
 function showError(){
 
- document.getElementById("chartBox").innerHTML=
- '<div class="errorText">This upazila is not under Cold wave insurance.</div>';
+document.getElementById("chartBox").innerHTML=
+'<div class="errorText">This upazila is not under Cold wave insurance.</div>';
 
 }
 
 </script>
+
 </body>
 </html>
