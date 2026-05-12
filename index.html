@@ -2,6 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Cold Wave Dashboard</title>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
@@ -12,25 +13,31 @@
 html,body{
 margin:0;
 padding:0;
+width:100%;
+height:100%;
 overflow:hidden;
 font-family:Arial;
 background:#dfe8f4;
 }
 
-/* FIXED PC SIZE EVEN MOBILE */
-body{
+/* SCREEN HOLDER */
+.viewport{
+width:100vw;
+height:100vh;
 display:flex;
 justify-content:center;
 align-items:center;
-height:100vh;
+overflow:hidden;
 }
 
+/* FIXED DESKTOP SIZE */
 .wrapper{
 width:1366px;
 height:768px;
 display:flex;
-background:#fff;
+background:#ffffff;
 box-shadow:0 0 25px rgba(0,0,0,.25);
+transform-origin:top left;
 }
 
 /* LEFT */
@@ -43,18 +50,18 @@ background:#f7f9fc;
 
 .controls{
 display:flex;
-gap:5px;
+gap:6px;
 padding:6px;
 }
 
 select,button{
 padding:7px;
 font-size:14px;
+border:1px solid #bbb;
+border-radius:4px;
 }
 
-select{
-flex:1;
-}
+select{flex:1;}
 
 #toggleMap{
 width:120px;
@@ -83,9 +90,9 @@ padding:10px;
 .box{
 padding:14px;
 border-radius:8px;
+font-size:18px;
 font-weight:bold;
 text-align:center;
-font-size:18px;
 }
 
 .claimed{background:#d4f8d4;}
@@ -96,9 +103,9 @@ font-size:18px;
 .chartBox{
 flex:1;
 margin:10px;
+padding:10px;
 background:#fff;
 border-radius:8px;
-padding:10px;
 }
 
 .errorText{
@@ -106,15 +113,17 @@ color:red;
 font-size:22px;
 font-weight:bold;
 text-align:center;
-margin-top:100px;
+margin-top:120px;
 }
 </style>
 </head>
 
 <body>
 
+<div class="viewport">
 <div class="wrapper">
 
+<!-- LEFT -->
 <div class="left">
 
 <div class="controls">
@@ -127,6 +136,7 @@ margin-top:100px;
 
 </div>
 
+<!-- RIGHT -->
 <div class="right">
 
 <div class="statsGrid">
@@ -135,7 +145,7 @@ margin-top:100px;
 <div class="box claimed" id="claimedBox">Claimed: 0</div>
 <div class="box nonclaimed" id="nonClaimedBox">Non Claimed: 0</div>
 
-<!-- CHANGES WITH SELECTION -->
+<!-- SELECTED -->
 <div class="box yellow" id="refTemp">Triggered Temp: -</div>
 <div class="box yellow" id="obsTemp">Observed Temp: -</div>
 
@@ -149,13 +159,34 @@ margin-top:100px;
 </div>
 
 </div>
+
+</div>
 </div>
 
 <script>
 
+/* AUTO SCALE WHOLE DASHBOARD */
+function fitDashboard(){
+
+const baseW = 1366;
+const baseH = 768;
+
+const scaleX = window.innerWidth / baseW;
+const scaleY = window.innerHeight / baseH;
+
+const scale = Math.min(scaleX, scaleY);
+
+document.querySelector(".wrapper").style.transform =
+"scale(" + scale + ")";
+
+}
+
+window.addEventListener("resize", fitDashboard);
+window.addEventListener("load", fitDashboard);
+
+/* MAP */
 let map = L.map('map').setView([23.5,90.3],7);
 
-/* MAPS */
 let roadLayer = L.tileLayer(
 'https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
 {maxZoom:20,subdomains:['mt0','mt1','mt2','mt3']}
@@ -191,6 +222,7 @@ let selectedLayer=null;
 let geoJSONData;
 let dataJSON={}, termJSON={};
 
+/* LOAD FILES */
 Promise.all([
 fetch('upazilas.geojson').then(r=>r.json()),
 fetch('Data.json').then(r=>r.json()),
@@ -204,7 +236,7 @@ termJSON=term;
 init();
 loadMap();
 updateFixedTotals();
-autoSelectFirst();
+selectCurrent();
 
 });
 
@@ -213,7 +245,7 @@ function clean(v){
 return v ? v.toString().trim() : '';
 }
 
-/* MIN TEMP */
+/* MIN OBSERVED */
 function getObservedMin(d,u){
 
 if(!dataJSON[d] || !dataJSON[d][u]) return null;
@@ -227,7 +259,7 @@ if(!vals.length) return null;
 return Math.min(...vals);
 }
 
-/* CLAIM STATUS */
+/* CLAIM CHECK */
 function isClaimed(d,u){
 
 if(!termJSON[d] || !termJSON[d][u]) return false;
@@ -240,7 +272,7 @@ if(observed===null || isNaN(trigger)) return false;
 return observed <= trigger;
 }
 
-/* FIXED TOTAL WHOLE BANGLADESH */
+/* FIXED TOTAL */
 function updateFixedTotals(){
 
 let totalClaim=0;
@@ -252,7 +284,7 @@ Object.keys(dataJSON[d]).forEach(u=>{
 
 if(termJSON[d] && termJSON[d][u]){
 
-if(isClaimed(d,u')) totalClaim++;
+if(isClaimed(d,u)) totalClaim++;
 else totalNon++;
 
 }
@@ -261,24 +293,26 @@ else totalNon++;
 
 });
 
-claimedBox.innerText="Claimed: "+totalClaim;
-nonClaimedBox.innerText="Non Claimed: "+totalNon;
+claimedBox.innerText="Claimed: " + totalClaim;
+nonClaimedBox.innerText="Non Claimed: " + totalNon;
+
 }
 
 /* INIT */
 function init(){
 
-let districts=Object.keys(dataJSON).sort();
+let districts = Object.keys(dataJSON).sort();
 
-district.innerHTML=districts.map(d=>
-`<option value="${d}">${d}</option>`).join('');
+district.innerHTML = districts.map(d =>
+`<option value="${d}">${d}</option>`
+).join('');
 
-district.onchange=()=>{
+district.onchange=function(){
 updateUpazila();
 selectCurrent();
 };
 
-upazila.onchange=()=>{
+upazila.onchange=function(){
 selectCurrent();
 };
 
@@ -289,26 +323,27 @@ updateUpazila();
 /* UPAZILA */
 function updateUpazila(){
 
-let d=district.value;
+let d = district.value;
 
-let ups=Object.keys(dataJSON[d]||{}).sort();
+let ups = Object.keys(dataJSON[d] || {}).sort();
 
-upazila.innerHTML=ups.map(u=>
-`<option value="${u}">${u}</option>`).join('');
+upazila.innerHTML = ups.map(u =>
+`<option value="${u}">${u}</option>`
+).join('');
 
 }
 
-/* MAP */
+/* MAP LOAD */
 function loadMap(){
 
-geoLayer=L.geoJSON(geoJSONData,{
+geoLayer = L.geoJSON(geoJSONData,{
 style:styleFeature,
-onEachFeature:(feature,layer)=>{
+onEachFeature:function(feature,layer){
 
-layer.on('click',()=>{
+layer.on("click",function(){
 
-let d=feature.properties.adm2_name;
-let u=feature.properties.adm3_name;
+let d = feature.properties.adm2_name;
+let u = feature.properties.adm3_name;
 
 if(dataJSON[d] && dataJSON[d][u]){
 
@@ -336,15 +371,13 @@ map.fitBounds(geoLayer.getBounds());
 /* STYLE */
 function styleFeature(feature){
 
-let d=clean(feature.properties.adm2_name);
-let u=clean(feature.properties.adm3_name);
+let d = clean(feature.properties.adm2_name);
+let u = clean(feature.properties.adm3_name);
 
 let fill='transparent';
 
 if(dataJSON[d] && dataJSON[d][u] && termJSON[d] && termJSON[d][u]){
-
 fill = isClaimed(d,u) ? "red" : "green";
-
 }
 
 return{
@@ -356,20 +389,15 @@ fillOpacity:fill==="transparent"?0:0.6
 
 }
 
-/* FIRST */
-function autoSelectFirst(){
-selectCurrent();
-}
-
-/* SELECT */
+/* SELECT CURRENT */
 function selectCurrent(){
 
-let d=district.value;
-let u=upazila.value;
+let d = district.value;
+let u = upazila.value;
 
-geoLayer.eachLayer(layer=>{
+geoLayer.eachLayer(function(layer){
 
-let p=layer.feature.properties;
+let p = layer.feature.properties;
 
 if(p.adm2_name===d && p.adm3_name===u){
 
@@ -411,9 +439,9 @@ function updateDashboard(d,u){
 let trigger = termJSON[d]?.[u]?.["Ref Min Temp"] ?? "-";
 let observed = getObservedMin(d,u);
 
-refTemp.innerText="Triggered Temp: "+trigger;
+refTemp.innerText = "Triggered Temp: " + trigger;
 
-obsTemp.innerText="Observed Temp: "+
+obsTemp.innerText = "Observed Temp: " +
 (observed===null ? "-" : observed.toFixed(2));
 
 if(isClaimed(d,u)){
@@ -431,23 +459,23 @@ drawChart(d,u);
 /* CHART */
 function drawChart(d,u){
 
-let box=document.getElementById("chartBox");
+let box = document.getElementById("chartBox");
 
-box.innerHTML='<canvas id="chart"></canvas>';
+box.innerHTML = '<canvas id="chart"></canvas>';
 
 let trigger = Number(termJSON[d]?.[u]?.["Ref Min Temp"]);
-let series=dataJSON[d][u];
+let series = dataJSON[d][u];
 
-let labels=Object.keys(series);
-let values=labels.map(k=>Number(series[k]));
+let labels = Object.keys(series);
+let values = labels.map(k=>Number(series[k]));
 
-let redDots = values.map(v =>
-(!isNaN(v) && v<=trigger) ? "red":"blue"
+let colors = values.map(v =>
+(!isNaN(v) && v<=trigger) ? "red" : "blue"
 );
 
 if(chart) chart.destroy();
 
-chart=new Chart(document.getElementById("chart"),{
+chart = new Chart(document.getElementById("chart"),{
 type:"line",
 data:{
 labels:labels,
@@ -455,11 +483,11 @@ datasets:[{
 data:values,
 borderColor:"blue",
 borderWidth:2,
-tension:.3,
+tension:0.3,
 fill:false,
 pointRadius:2.5,
-pointBackgroundColor:redDots,
-pointBorderColor:redDots
+pointBackgroundColor:colors,
+pointBorderColor:colors
 }]
 },
 options:{
@@ -469,7 +497,7 @@ plugins:{
 legend:{display:false},
 title:{
 display:true,
-text:u+" Temperature Trend"
+text:u + " Temperature Trend"
 }
 }
 }
@@ -480,12 +508,11 @@ text:u+" Temperature Trend"
 /* ERROR */
 function showError(){
 
-document.getElementById("chartBox").innerHTML=
+document.getElementById("chartBox").innerHTML =
 '<div class="errorText">This upazila is not under Cold wave insurance.</div>';
 
 }
 
 </script>
-
 </body>
 </html>
